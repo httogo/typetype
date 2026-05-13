@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 显式声明颜色方案，防止浏览器系统暗色模式干扰 */
+html {
+  color-scheme: light;
+  background-color: #ffffff;
+}
+html.dark {
+  color-scheme: dark;
+  background-color: #111827;
+}
+
+/* 主题切换过渡 - 仅在手动切换时临时添加 */
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color 0.2s ease 0s,
+              color 0.2s ease 0s,
+              border-color 0.2s ease 0s,
+              box-shadow 0.2s ease 0s,
+              fill 0.2s ease 0s,
+              stroke 0.2s ease 0s !important;
+  transition-delay: 0s !important;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: inherit;
+}
+
+/* 光标脉冲动画 */
+@keyframes cursor-pulse {
+  0%, 100% { border-color: rgb(99 102 241); opacity: 1; }
+  50% { border-color: rgb(99 102 241); opacity: 0.3; }
+}
+.animate-cursor {
+  animation: cursor-pulse 1.2s ease-in-out infinite;
+}
+
+/* 字符输入过渡效果 */
+.char-transition {
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+/* 结果数字滚动动画 */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-count-up {
+  animation: count-up 0.5s ease-out forwards;
+}
+
+/* 页面淡入 */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* 暂停提示淡入 */
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.2s ease-out;
+}
+
+/* 浮动动画 */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+.animate-float {
+  animation: float 2s ease-in-out infinite;
+}
