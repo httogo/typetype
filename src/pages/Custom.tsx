@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { exportImportService } from '../services/exportImport';
 import { storageService } from '../services/storage';
+import { fetchWithRetry } from '../utils/fetchWithRetry';
 
 export default function Custom() {
   const [text, setText] = useState('');
@@ -32,10 +33,13 @@ export default function Custom() {
 
     setExtracting(true);
     try {
-      const res = await fetch('/api/extract', {
+      const res = await fetchWithRetry('/api/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: trimmedUrl }),
+      }, {
+        maxRetries: 2,
+        timeout: 15000,
       });
 
       const rawText = await res.text();

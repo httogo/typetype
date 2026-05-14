@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SettingsProvider } from './context/SettingsContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import Practice from './pages/Practice';
 import Reading from './pages/Reading';
@@ -11,15 +12,17 @@ function App() {
   return (
     <SettingsProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Practice />} />
-            <Route path="reading" element={<Reading />} />
-            <Route path="custom" element={<Custom />} />
-            <Route path="articles" element={<Articles />} />
-            <Route path="history" element={<History />} />
-          </Route>
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Practice />} />
+              <Route path="reading" element={<Reading />} />
+              <Route path="custom" element={<Custom />} />
+              <Route path="articles" element={<Articles />} />
+              <Route path="history" element={<History />} />
+            </Route>
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     </SettingsProvider>
   );
