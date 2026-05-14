@@ -65,7 +65,7 @@ export default function Home() {
           to="/custom"
           className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium hover:underline transition-colors duration-200"
         >
-          使用自定义文本练习 →
+          使用导入文章练习 →
         </Link>
       </div>
     </div>

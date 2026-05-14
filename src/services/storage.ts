@@ -111,7 +111,7 @@ export const storageService = {
     }
   },
 
-  // ---- 自定义文本 ----
+  // ---- 导入文章 ----
 
   getCustomTexts(): TextItem[] {
     try {

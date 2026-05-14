@@ -2,6 +2,8 @@
 
 提升你的英文打字速度和准确率。
 
+导航结构：练习 | 阅读 | 导入文章 | 历史记录
+
 ## 在线体验
 
 https://typetype-theta.vercel.app/
@@ -27,10 +29,22 @@ https://typetype-theta.vercel.app/
 - 错误按键热力图（QWERTY 键盘可视化）
 - 数据导出（JSON/CSV）/ 导入
 
+### 阅读模式
+- 独立阅读页面，纯阅读用途（禁用打字输入）
+- 词频三级着色：高频（1–3000）/ 中频（3001–8000）/ 低频（8001–20000）
+- 低频词 / 超低频词灰色淡化显示
+- 词组下划线标记
+- 行内括号注释
+- 点击查词
+
+### 导入文章
+- 手动输入练习文本
+- **通过网址自动提取网页正文**（使用 Mozilla Readability 算法）
+- 文本集导入导出（JSON 格式）
+
 ### 个性化
 - 明暗主题切换（平滑过渡）
 - 可选打字音效（机械键盘风格）
-- 自定义练习文本
 - 字体大小调节
 - PWA 支持（可安装、离线使用）
 
@@ -44,6 +58,8 @@ https://typetype-theta.vercel.app/
 - Web Audio API（音效）
 - vite-plugin-pwa（PWA）
 - ECDICT（离线词典数据源）
+- Mozilla Readability（网页正文提取）
+- Vercel Serverless Functions（生产环境 API）
 
 ## 本地开发
 
@@ -51,7 +67,7 @@ https://typetype-theta.vercel.app/
 # 安装依赖
 npm install
 
-# 开发模式
+# 开发模式（包含 API 功能）
 npm run dev
 
 # 构建
@@ -60,6 +76,8 @@ npm run build
 # 预览构建结果
 npm run preview
 ```
+
+所有功能（包括网页正文提取）在本地开发模式下均可正常使用。
 
 ## 词典数据
 

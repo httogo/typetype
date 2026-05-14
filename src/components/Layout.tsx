@@ -10,7 +10,7 @@ const TIMED_OPTIONS: TimedDuration[] = [15, 30, 60, 120];
 const navItems = [
   { to: '/', label: '练习', end: true },
   { to: '/reading', label: '阅读' },
-  { to: '/custom', label: '自定义文本' },
+  { to: '/custom', label: '导入文章' },
   { to: '/history', label: '历史记录' },
 ];
 
@@ -282,7 +282,7 @@ export default function Layout() {
                     </div>
 
                     <div className="py-4">
-                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">直接显示释义</label>
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">显示释义</label>
                       <div className="flex gap-3 mt-1.5">
                         {([['h', '高频'], ['m', '中频'], ['l', '低频']] as ['h' | 'm' | 'l', string][]).map(([key, label]) => (
                           <label key={key} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
