@@ -28,6 +28,21 @@ interface UseTypingEngineReturn {
   jumpTo: (index: number) => void;
 }
 
+// Character equivalence mapping for typographic variants
+function isCharEquivalent(input: string, target: string): boolean {
+  if (input === target) return true;
+
+  const singleQuotes = ["'", "\u2018", "\u2019"]; // ' \u2018 \u2019
+  const doubleQuotes = ['"', "\u201C", "\u201D"]; // " \u201C \u201D
+  const dashes = ["-", "\u2013", "\u2014"];        // - \u2013 \u2014
+
+  if (singleQuotes.includes(input) && singleQuotes.includes(target)) return true;
+  if (doubleQuotes.includes(input) && doubleQuotes.includes(target)) return true;
+  if (dashes.includes(input) && dashes.includes(target)) return true;
+
+  return false;
+}
+
 function initChars(text: string): CharState[] {
   return text.split('').map((char, index) => ({
     char,
@@ -217,7 +232,7 @@ export function useTypingEngine({
         const idx = prev;
         if (idx >= currentChars.length) return prev;
 
-        const isCorrect = e.key === currentChars[idx].char;
+        const isCorrect = isCharEquivalent(e.key, currentChars[idx].char);
 
         setChars((prevChars) => {
           const updated = [...prevChars];

@@ -95,6 +95,9 @@ export default function Practice() {
   const textAreaRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Visible center for rendering window when user scrolls away from currentIndex
+  const [visibleCenter, setVisibleCenter] = useState<number | undefined>(undefined);
+
   // Tooltip state
   const [tooltip, setTooltip] = useState<{
     word: string;
@@ -221,14 +224,16 @@ export default function Practice() {
     clearTimeout(scrollTimerRef.current);
     scrollTimerRef.current = window.setTimeout(() => {
       userScrollingRef.current = false;
+      setVisibleCenter(undefined);
     }, 3000); // 3秒后恢复自动滚动
   }, []);
 
-  // Typing resumes auto-scroll
+  // Typing resumes auto-scroll and clears visibleCenter
   useEffect(() => {
     if (currentIndex > 0) {
       userScrollingRef.current = false;
       clearTimeout(scrollTimerRef.current);
+      setVisibleCenter(undefined);
     }
   }, [currentIndex]);
 
@@ -258,7 +263,15 @@ export default function Practice() {
       if (prev.atTop === atTop && prev.atBottom === atBottom) return prev;
       return { atTop, atBottom };
     });
-  }, []);
+
+    // Estimate visible center character position when user is manually scrolling
+    if (userScrollingRef.current) {
+      const scrollableHeight = el.scrollHeight - el.clientHeight;
+      const scrollRatio = scrollableHeight > 0 ? el.scrollTop / scrollableHeight : 0;
+      const estimatedPos = Math.floor(scrollRatio * activeText.length);
+      setVisibleCenter(estimatedPos);
+    }
+  }, [activeText.length]);
 
   const maskStyle = useMemo(() => {
     const { atTop, atBottom } = scrollState;
@@ -367,6 +380,9 @@ export default function Practice() {
   const timeDisplay = mode === 'timed' && remaining !== null ? remaining : elapsed;
 
   // Shared text rendering computations
+  // When user is scrolling, use visibleCenter as rendering center; otherwise use currentIndex
+  const effectiveCenter = visibleCenter !== undefined ? visibleCenter : currentIndex;
+
   const {
     wordGroups,
     onlyWords,
@@ -382,7 +398,7 @@ export default function Practice() {
   } = useTextRendering({
     text: activeText,
     originalText: currentText,
-    currentIndex,
+    currentIndex: effectiveCenter,
     renderWindow: RENDER_WINDOW,
     settings,
   });
@@ -401,7 +417,7 @@ export default function Practice() {
     return onlyWords.map(w => w.word);
   }, [onlyWords]);
 
-  const handleWordClick = useCallback((e: React.MouseEvent | MouseEvent, word: string, groupStartIndex: number) => {
+  const handleWordClick = useCallback((e: React.MouseEvent | MouseEvent, word: string, groupStartIndex: number, targetEl?: HTMLElement) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -409,7 +425,7 @@ export default function Practice() {
     // Only look up actual words
     if (!/[a-zA-Z]/.test(word)) return;
 
-    const target = e.currentTarget as HTMLElement || e.target as HTMLElement;
+    const target = targetEl || e.currentTarget as HTMLElement || e.target as HTMLElement;
     const rect = target.getBoundingClientRect();
 
     // Check if this word is part of a correlative phrase
@@ -476,7 +492,7 @@ export default function Practice() {
     if (wordTarget) {
       const wordStart = parseInt(wordTarget.getAttribute('data-word-start')!, 10);
       const word = wordTarget.getAttribute('data-word')!;
-      handleWordClick(e, word, wordStart);
+      handleWordClick(e, word, wordStart, wordTarget);
       return;
     }
 
