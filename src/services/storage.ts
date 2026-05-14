@@ -15,6 +15,10 @@ const DEFAULT_SETTINGS: Settings = {
   soundEnabled: false,
   soundVolume: 0.5,
   phraseHighlight: true,
+  freqHighlight: { h: false, m: false, l: false },
+  freqAnnotation: { h: true, m: true, l: true },
+  freqDimLow: false,
+  freqDimUltraLow: false,
 };
 
 export const storageService = {

@@ -30,7 +30,14 @@ export interface Settings {
   soundEnabled: boolean; // 是否启用音效
   soundVolume: number; // 音量 0-1
   phraseHighlight: boolean; // 是否高亮显示词组
+  // 词频相关设置
+  freqHighlight: { h: boolean; m: boolean; l: boolean }; // 各频率是否着色标记
+  freqAnnotation: { h: boolean; m: boolean; l: boolean }; // 各频率是否显示注释
+  freqDimLow: boolean; // 是否灰色标记低频词(8001-20000)
+  freqDimUltraLow: boolean; // 是否灰色标记超低频词(20000以外)
 }
+
+export type FreqLevel = 'h' | 'm' | 'l' | 'u';
 
 export type CharStatus = 'correct' | 'incorrect' | 'current' | 'pending';
 

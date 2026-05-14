@@ -1,6 +1,7 @@
 interface DictEntry {
   p: string; // phonetic 音标
   t: string; // translation 中文释义
+  f?: 'h' | 'm' | 'l'; // frequency level 频率等级
 }
 
 interface CorrelativePattern {
@@ -139,6 +140,21 @@ class DictionaryService {
 
   getCorrelativePatterns(): CorrelativePattern[] {
     return this.correlativePatterns;
+  }
+
+  getFrequency(word: string): 'h' | 'm' | 'l' | 'u' {
+    if (!this.dict) return 'u';
+    const lower = word.toLowerCase().replace(/[^a-z'-]/g, '');
+    if (!lower) return 'u';
+
+    const entry = this.dict[lower];
+    if (entry && entry.f) return entry.f;
+
+    // 尝试词形还原后查找
+    const looked = this.lookup(lower);
+    if (looked && looked.f) return looked.f;
+
+    return 'u'; // 不在词典中 = 超低频
   }
 
   isLoaded(): boolean {

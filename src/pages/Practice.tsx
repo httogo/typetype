@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTypingEngine } from '../hooks/useTypingEngine';
 import { useSettings } from '../context/SettingsContext';
@@ -6,7 +6,7 @@ import { storageService } from '../services/storage';
 import { dictionaryService } from '../services/dictionary';
 import { getRandomText } from '../utils/textSelection';
 import WordTooltip from '../components/WordTooltip';
-import type { Settings } from '../types';
+import type { Settings, FreqLevel } from '../types';
 
 type Difficulty = Settings['difficulty'];
 
@@ -257,6 +257,43 @@ export default function Practice() {
     return { phraseMarkedIndices: marked, correlativeMap: corrMap };
   }, [onlyWords, settings.phraseHighlight]);
 
+  // Pre-compute word frequencies
+  const wordFrequencies = useMemo(() => {
+    const freqMap = new Map<number, FreqLevel>();
+    if (!dictionaryService.isLoaded()) return freqMap;
+    wordGroups.forEach((group) => {
+      if (/[a-zA-Z]/.test(group.word)) {
+        const freq = dictionaryService.getFrequency(group.word);
+        freqMap.set(group.startIndex, freq);
+      }
+    });
+    return freqMap;
+  }, [wordGroups, dictionaryService.isLoaded()]);
+
+  // Pre-compute word annotations (inline parenthetical translations)
+  const wordAnnotations = useMemo(() => {
+    const annotations = new Map<number, string>();
+    if (!dictionaryService.isLoaded()) return annotations;
+    wordGroups.forEach((group, idx) => {
+      if (!/[a-zA-Z]/.test(group.word)) return;
+      const freq = dictionaryService.getFrequency(group.word);
+      const shouldAnnotate =
+        (freq === 'h' && settings.freqAnnotation.h) ||
+        (freq === 'm' && settings.freqAnnotation.m) ||
+        (freq === 'l' && settings.freqAnnotation.l);
+      if (!shouldAnnotate) return;
+      const entry = dictionaryService.lookup(group.word);
+      if (entry && entry.t) {
+        // 去掉词性，只取第一个翻译
+        let line = entry.t.split('\n')[0].trim();
+        line = line.replace(/^[a-z]+\.\s*/i, '');
+        const first = line.split(/[,;，；、]/)[0].trim();
+        if (first) annotations.set(idx, first);
+      }
+    });
+    return annotations;
+  }, [wordGroups, settings.freqAnnotation, dictionaryService.isLoaded()]);
+
   const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>, word: string, groupStartIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -307,6 +344,9 @@ export default function Practice() {
 
     // No phrase match, fall back to single word lookup
     setHighlightedIndices(new Set());
+
+
+
     const entry = dictionaryService.lookup(word);
     if (entry) {
       setTooltip({
@@ -375,9 +415,24 @@ export default function Practice() {
               className="font-mono leading-relaxed tracking-wide break-all max-w-4xl mx-auto"
               style={{ fontSize: `${settings.fontSize}px` }}
             >
-              {wordGroups.map((group) => {
+              {wordGroups.map((group, groupIdx) => {
                 const isWord = /[a-zA-Z]/.test(group.word);
                 const charSlice = chars.slice(group.startIndex, group.startIndex + group.length);
+
+                // Determine frequency-related styles for this word
+                const freq = isWord ? wordFrequencies.get(group.startIndex) : undefined;
+                const isPhraseWord = phraseMarkedIndices.has(group.startIndex);
+
+                // Frequency color highlight (only affects pending chars)
+                let freqColorClass = '';
+                if (isWord && !isPhraseWord && freq) {
+                  const colorMap = { h: 'text-green-600 dark:text-green-400', m: 'text-blue-600 dark:text-blue-400', l: 'text-orange-600 dark:text-orange-400' };
+                  if (freq !== 'u' && settings.freqHighlight[freq]) {
+                    freqColorClass = colorMap[freq];
+                  }
+                }
+
+                // Frequency dimming removed from Practice (only applies in Reading page)
 
                 const renderedChars = charSlice.map((charState, i) => {
                   const idx = group.startIndex + i;
@@ -391,7 +446,10 @@ export default function Practice() {
                         return 'char-transition border-l-2 border-indigo-500 animate-cursor text-gray-800 dark:text-gray-100';
                       case 'pending':
                       default:
-                        return 'char-transition text-gray-300 dark:text-gray-500';
+                        if (freqColorClass) {
+                          return `char-transition ${freqColorClass}`;
+                        }
+                        return 'char-transition text-gray-400 dark:text-gray-500';
                     }
                   })();
                   return (
@@ -407,19 +465,31 @@ export default function Practice() {
 
                 if (isWord) {
                   const isHighlighted = highlightedIndices.has(group.startIndex);
-                  const isPhraseWord = phraseMarkedIndices.has(group.startIndex);
                   return (
-                    <span
-                      key={`w-${group.startIndex}`}
-                      className={`cursor-pointer hover:underline hover:decoration-dashed hover:decoration-gray-400/40 dark:hover:decoration-gray-500/40 hover:underline-offset-4${
-                        isHighlighted ? ' bg-indigo-100/60 dark:bg-indigo-900/40 rounded-sm' : ''
-                      }${
-                        isPhraseWord && !isHighlighted ? ' underline decoration-dashed underline-offset-4' : ''
-                      }`}
-                      onClick={(e) => handleWordClick(e, group.word, group.startIndex)}
-                    >
-                      {renderedChars}
-                    </span>
+                    <Fragment key={`w-${group.startIndex}`}>
+                      <span
+                        className={`cursor-pointer hover:underline hover:decoration-dashed hover:decoration-gray-400/40 dark:hover:decoration-gray-500/40 hover:underline-offset-4${
+                          isHighlighted ? ' bg-indigo-100/60 dark:bg-indigo-900/40 rounded-sm' : ''
+                        }${
+                          isPhraseWord && !isHighlighted ? ' underline decoration-dashed decoration-gray-400 dark:decoration-gray-500 underline-offset-4' : ''
+                        }`}
+                        onClick={(e) => handleWordClick(e, group.word, group.startIndex)}
+                      >
+                        {renderedChars}
+                      </span>
+                      {wordAnnotations.has(groupIdx) && (() => {
+                        const wordEndCharIndex = group.startIndex + group.length - 1;
+                        const isWordCompleted = currentIndex > wordEndCharIndex;
+                        const annotationColorClass = isWordCompleted
+                          ? 'text-emerald-500 dark:text-emerald-400'
+                          : 'text-gray-400 dark:text-gray-500';
+                        return (
+                          <span className={`${annotationColorClass} select-none pointer-events-none`}>
+                            ({wordAnnotations.get(groupIdx)})
+                          </span>
+                        );
+                      })()}
+                    </Fragment>
                   );
                 }
 

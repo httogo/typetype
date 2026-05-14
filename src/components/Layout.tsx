@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import type { TimedDuration } from '../types';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
+
 const TIMED_OPTIONS: TimedDuration[] = [15, 30, 60, 120];
 
 const navItems = [
   { to: '/', label: '练习', end: true },
+  { to: '/reading', label: '阅读' },
   { to: '/custom', label: '自定义文本' },
   { to: '/history', label: '历史记录' },
 ];
@@ -17,6 +19,8 @@ export default function Layout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsPanelRef = useRef<HTMLDivElement>(null);
   const { settings, updateSettings } = useSettings();
+  const location = useLocation();
+  const isReadingPage = location.pathname === '/reading';
 
   // Apply dark mode class on document root
   useEffect(() => {
@@ -232,7 +236,7 @@ export default function Layout() {
                     </div>
 
                     {/* Sound toggle */}
-                    <div className="pt-4">
+                    <div className="py-4">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">按键音效</label>
                         <button
@@ -258,6 +262,68 @@ export default function Layout() {
                         </div>
                       )}
                     </div>
+
+                    {/* 词频设置 */}
+                    <div className="py-4">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">词频着色</label>
+                      <div className="flex gap-3 mt-1.5">
+                        {([['h', '高频'], ['m', '中频'], ['l', '低频']] as ['h' | 'm' | 'l', string][]).map(([key, label]) => (
+                          <label key={key} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={settings.freqHighlight[key]}
+                              onChange={() => updateSettings({ freqHighlight: { ...settings.freqHighlight, [key]: !settings.freqHighlight[key] } })}
+                              className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="py-4">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">直接显示释义</label>
+                      <div className="flex gap-3 mt-1.5">
+                        {([['h', '高频'], ['m', '中频'], ['l', '低频']] as ['h' | 'm' | 'l', string][]).map(([key, label]) => (
+                          <label key={key} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={settings.freqAnnotation[key]}
+                              onChange={() => updateSettings({ freqAnnotation: { ...settings.freqAnnotation, [key]: !settings.freqAnnotation[key] } })}
+                              className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 阅读设置 - 仅在阅读页面显示 */}
+                    {isReadingPage && (
+                    <div className="pt-4">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">阅读设置</label>
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settings.freqDimLow}
+                            onChange={() => updateSettings({ freqDimLow: !settings.freqDimLow })}
+                            className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          淡化低频词
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={settings.freqDimUltraLow}
+                            onChange={() => updateSettings({ freqDimUltraLow: !settings.freqDimUltraLow })}
+                            className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          淡化超低频词
+                        </label>
+                      </div>
+                    </div>
+                    )}
                   </div>
                 )}
               </div>

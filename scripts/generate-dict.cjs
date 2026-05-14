@@ -60,6 +60,7 @@ console.log(`查询到 ${rows.length} 条记录`);
 // 处理并去重
 const dict = {};
 let skipped = 0;
+let rank = 0; // 按 BNC 频率排序的排名计数器
 
 for (const row of rows) {
   const word = row.word.toLowerCase().trim();
@@ -69,6 +70,8 @@ for (const row of rows) {
     skipped++;
     continue;
   }
+
+  rank++; // 每个新词排名递增
 
   // 处理音标
   let phonetic = row.phonetic || '';
@@ -92,8 +95,18 @@ for (const row of rows) {
     translation = translation.substring(0, 57) + '...';
   }
 
+  // 根据排名确定频率等级
+  let freqLevel;
+  if (rank <= 3000) {
+    freqLevel = 'h'; // 高频
+  } else if (rank <= 8000) {
+    freqLevel = 'm'; // 中频
+  } else {
+    freqLevel = 'l'; // 低频
+  }
+
   // 构建词条
-  const entry = { t: translation };
+  const entry = { t: translation, f: freqLevel };
   if (phonetic) {
     entry.p = phonetic;
   }
