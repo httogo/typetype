@@ -65,25 +65,16 @@ export default function Layout() {
   // 切换主题，并临时添加过渡 class 以避免闪烁
   const toggleTheme = () => {
     const root = document.documentElement;
-    // 添加颜色过渡 class
-    root.classList.add('theme-transition');
-    // 整页 opacity 抨动，让视觉切换更统一
-    root.style.transition = 'opacity 0.15s ease';
-    root.style.opacity = '0.85';
-
     const newTheme = settings.theme === 'dark' ? 'light' : 'dark';
+
+    // 添加过渡类
+    root.classList.add('theme-transitioning');
     updateSettings({ theme: newTheme });
 
-    // 恢复透明度
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        root.style.opacity = '1';
-        setTimeout(() => {
-          root.style.transition = '';
-          root.classList.remove('theme-transition');
-        }, 200);
-      }, 50);
-    });
+    // 过渡完成后移除类
+    setTimeout(() => {
+      root.classList.remove('theme-transitioning');
+    }, 300);
   };
 
   // Close settings panel on click outside

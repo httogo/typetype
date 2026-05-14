@@ -35,6 +35,15 @@ function initChars(text: string): CharState[] {
   }));
 }
 
+/**
+ * Core typing engine hook managing character states, input handling,
+ * timing, and result calculation.
+ *
+ * @param text - The text to type (supports dynamic extension for progressive loading)
+ * @param mode - Practice mode: 'full' (complete text) or 'timed' (time-limited)
+ * @param timedDuration - Duration in seconds for timed mode
+ * @returns Engine state and control methods
+ */
 export function useTypingEngine({
   text,
   mode,
@@ -57,6 +66,16 @@ export function useTypingEngine({
     soundRef.current = { enabled: settings.soundEnabled, volume: settings.soundVolume };
     soundService.setVolume(settings.soundVolume);
   }, [settings.soundEnabled, settings.soundVolume]);
+
+  // Refs for mode/timedDuration to avoid handleKeyDown re-creation
+  const modeRef = useRef(mode);
+  const timedDurationRef = useRef(timedDuration);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+  useEffect(() => {
+    timedDurationRef.current = timedDuration;
+  }, [timedDuration]);
 
   const handleTimeUp = useCallback(() => {
     setIsFinished(true);
@@ -182,8 +201,10 @@ export function useTypingEngine({
       // Start on first character input
       if (!started) {
         setIsStarted(true);
-        if (mode === 'timed' && timedDuration) {
-          timerRef.current.start(timedDuration);
+        const currentMode = modeRef.current;
+        const currentDuration = timedDurationRef.current;
+        if (currentMode === 'timed' && currentDuration) {
+          timerRef.current.start(currentDuration);
         } else {
           timerRef.current.start();
         }
@@ -234,7 +255,7 @@ export function useTypingEngine({
         const newIndex = idx + 1;
 
         // Check completion for full mode
-        if (mode === 'full' && newIndex >= currentChars.length) {
+        if (modeRef.current === 'full' && newIndex >= currentChars.length) {
           setIsFinished(true);
           setErrorMap({ ...errorMapRef.current });
           timerRef.current.stop();
@@ -244,7 +265,7 @@ export function useTypingEngine({
         return newIndex;
       });
     },
-    [mode, timedDuration, reset],
+    [reset],
   );
 
   // Bind global keydown listener using ref pattern to avoid re-registration

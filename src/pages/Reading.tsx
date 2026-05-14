@@ -79,6 +79,10 @@ export default function Reading() {
 
   const loadNextText = () => {
     const item = getRandomText(difficulty);
+    if (!item || !item.content.trim()) {
+      setCurrentText('No text available. Please try a different difficulty.');
+      return;
+    }
     setCurrentText(item.content);
     setTooltip(null);
     setHighlightedIndices(new Set());
@@ -135,6 +139,20 @@ export default function Reading() {
     settings,
   });
 
+  // Map cache: O(1) lookup for word index by startIndex
+  const wordIdxMap = useMemo(() => {
+    const map = new Map<number, number>();
+    onlyWords.forEach((w, idx) => {
+      map.set(w.startIndex, idx);
+    });
+    return map;
+  }, [onlyWords]);
+
+  // Cache word strings to avoid creating new arrays on every click
+  const wordStrings = useMemo(() => {
+    return onlyWords.map(w => w.word);
+  }, [onlyWords]);
+
   const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>, word: string, groupStartIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
@@ -158,10 +176,9 @@ export default function Reading() {
       return;
     }
 
-    // Check phrase match
-    const wordIdx = onlyWords.findIndex(w => w.startIndex === groupStartIndex);
-    if (wordIdx >= 0) {
-      const wordStrings = onlyWords.map(w => w.word);
+    // Check phrase match using O(1) Map lookup
+    const wordIdx = wordIdxMap.get(groupStartIndex);
+    if (wordIdx !== undefined) {
       const phraseResult = dictionaryService.lookupPhrase(wordStrings, wordIdx);
       if (phraseResult) {
         const phraseWordGroups = onlyWords.slice(wordIdx, wordIdx + phraseResult.length);

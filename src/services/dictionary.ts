@@ -1,4 +1,5 @@
 import type { FreqLevel } from '../types';
+import { logger } from './logger';
 
 interface DictEntry {
   p: string; // phonetic 音标
@@ -73,13 +74,21 @@ class DictionaryService {
         this.dict = data;
       })
       .catch(err => {
-        console.error('Failed to load dictionary:', err);
+        logger.error('dictionary.load', err);
         this.dict = {};
       });
 
     return this.loading;
   }
 
+  /**
+   * Look up a word's dictionary entry, with lemmatization fallback.
+   * Returns phonetic transcription, translation, and frequency level.
+   * Results are cached for performance.
+   *
+   * @param word - The word to look up (case-insensitive, punctuation stripped)
+   * @returns Dictionary entry or null if not found
+   */
   lookup(word: string): DictEntry | null {
     if (!this.dict) return null;
     const lower = this.normalize(word);
@@ -106,6 +115,14 @@ class DictionaryService {
     return null;
   }
 
+  /**
+   * Try to match a continuous phrase starting at startIndex.
+   * Checks from longest (5 words) to shortest (2 words).
+   *
+   * @param words - Array of all words in the text
+   * @param startIndex - Index to start matching from
+   * @returns Matched phrase entry and its word length, or null
+   */
   // 尝试从 startIndex 开始匹配词组（从长到短，最多5个词）
   lookupPhrase(words: string[], startIndex: number): { entry: DictEntry; length: number } | null {
     if (!this.dict) return null;
@@ -118,6 +135,16 @@ class DictionaryService {
     return null;
   }
 
+  /**
+   * Match correlative (non-continuous) phrase patterns like "as...as", "not only...but also".
+   * Uses sentence boundary detection to avoid cross-sentence matching.
+   *
+   * @param words - Array of normalized words
+   * @param startIndex - Index to start matching from
+   * @param originalText - Full original text for sentence boundary checking
+   * @param wordPositions - Character positions of each word in the original text
+   * @returns Matched indices, translation, and pattern label, or null
+   */
   // 匹配关联词组（非连续词组）
   // originalText 和 wordPositions 用于句子边界检查，防止跨句匹配
   matchCorrelative(words: string[], startIndex: number, originalText?: string, wordPositions?: number[]): {
@@ -196,6 +223,14 @@ class DictionaryService {
     return this.correlativePatterns;
   }
 
+  /**
+   * Get the frequency level of a word.
+   * Returns 'h' (high), 'm' (medium), 'l' (low), or 'u' (unknown/unlisted).
+   * Uses lemmatization fallback and caches results.
+   *
+   * @param word - The word to check (case-insensitive)
+   * @returns Frequency level
+   */
   getFrequency(word: string): FreqLevel {
     if (!this.dict) return 'u';
     const lower = this.normalize(word);
@@ -205,8 +240,20 @@ class DictionaryService {
     const cached = this.freqCache.get(lower);
     if (cached !== undefined) return cached;
 
-    const entry = this.lookup(lower);
-    const freq: FreqLevel = entry?.f ?? 'u';
+    let freq: FreqLevel = 'u';
+
+    // 直接查字典获取频率，不经过 lookup
+    if (this.dict[lower]) {
+      freq = this.dict[lower].f ?? 'u';
+    } else {
+      for (const s of this.stem(lower)) {
+        if (this.dict[s]) {
+          freq = this.dict[s].f ?? 'u';
+          break;
+        }
+      }
+    }
+
     this.cacheSet(this.freqCache, lower, freq);
     return freq;
   }

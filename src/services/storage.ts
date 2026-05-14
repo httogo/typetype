@@ -1,5 +1,6 @@
 import type { TypingResult, Settings, TextItem, SavedArticle } from '../types';
 import { parseChapters } from '../utils/chapterParser';
+import { logger } from './logger';
 
 const HISTORY_KEY = 'typetype_history';
 const SETTINGS_KEY = 'typetype_settings';
@@ -37,18 +38,20 @@ export const storageService = {
     }
   },
 
-  saveResult(result: TypingResult): void {
+  saveResult(result: TypingResult): boolean {
     try {
       const history = this.getHistory();
       history.push(result);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    } catch {
-      console.error('Failed to save typing result');
+      return true;
+    } catch (e) {
+      logger.error('storage.saveResult', e);
+      return false;
     }
   },
 
   /** 原子操作：同时保存打字结果和错误统计，防止数据不一致 */
-  saveTypingResult(result: TypingResult, errorMap: Record<string, { errors: number; total: number }>): void {
+  saveTypingResult(result: TypingResult, errorMap: Record<string, { errors: number; total: number }>): boolean {
     try {
       // 读取当前数据
       const history = this.getHistory();
@@ -66,8 +69,10 @@ export const storageService = {
       // 一次性写入
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
       localStorage.setItem(ERROR_STATS_KEY, JSON.stringify(errorStats));
+      return true;
     } catch (e) {
-      console.error('Failed to save typing result:', e);
+      logger.error('storage.saveTypingResult', e);
+      return false;
     }
   },
 
@@ -75,7 +80,7 @@ export const storageService = {
     try {
       localStorage.removeItem(HISTORY_KEY);
     } catch {
-      console.error('Failed to clear history');
+      logger.error('storage.clearHistory');
     }
   },
 
@@ -84,7 +89,7 @@ export const storageService = {
       const history = this.getHistory().filter((r) => r.id !== id);
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     } catch {
-      console.error('Failed to delete result');
+      logger.error('storage.deleteResult');
     }
   },
 
@@ -105,7 +110,7 @@ export const storageService = {
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     } catch {
-      console.error('Failed to save settings');
+      logger.error('storage.saveSettings');
     }
   },
 
@@ -133,7 +138,7 @@ export const storageService = {
       }
       localStorage.setItem(ERROR_STATS_KEY, JSON.stringify(existing));
     } catch {
-      console.error('Failed to update error stats');
+      logger.error('storage.updateErrorStats');
     }
   },
 
@@ -154,7 +159,7 @@ export const storageService = {
     try {
       localStorage.setItem(CUSTOM_TEXTS_KEY, JSON.stringify(texts));
     } catch {
-      console.error('Failed to save custom texts');
+      logger.error('storage.saveCustomTexts');
     }
   },
 
@@ -166,7 +171,7 @@ export const storageService = {
       const merged = [...existing, ...unique];
       localStorage.setItem(CUSTOM_TEXTS_KEY, JSON.stringify(merged));
     } catch {
-      console.error('Failed to add custom texts');
+      logger.error('storage.addCustomTexts');
     }
   },
 
@@ -196,7 +201,7 @@ export const storageService = {
       articles.unshift(newArticle);
       localStorage.setItem(ARTICLES_KEY, JSON.stringify(articles));
     } catch (e) {
-      console.error('Failed to save article:', e);
+      logger.error('storage.saveArticle', e);
       throw new Error('存储空间不足，无法保存文章');
     }
     return newArticle;
@@ -211,7 +216,7 @@ export const storageService = {
         localStorage.setItem(ARTICLES_KEY, JSON.stringify(articles));
       }
     } catch (e) {
-      console.error('Failed to update article:', e);
+      logger.error('storage.updateArticle', e);
       throw new Error('存储空间不足，无法更新文章');
     }
   },
@@ -221,7 +226,7 @@ export const storageService = {
       const articles = this.getSavedArticles().filter((a) => a.id !== id);
       localStorage.setItem(ARTICLES_KEY, JSON.stringify(articles));
     } catch (e) {
-      console.error('Failed to delete article:', e);
+      logger.error('storage.deleteArticle', e);
       throw new Error('存储操作失败，无法删除文章');
     }
   },
@@ -230,7 +235,7 @@ export const storageService = {
     try {
       localStorage.removeItem(ARTICLES_KEY);
     } catch {
-      console.error('Failed to clear articles');
+      logger.error('storage.clearAllArticles');
     }
   },
 };

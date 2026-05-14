@@ -4,6 +4,7 @@ import { useTypingEngine } from '../hooks/useTypingEngine';
 import { useTextRendering } from '../hooks/useTextRendering';
 import { useSettings } from '../context/SettingsContext';
 import { storageService } from '../services/storage';
+import { logger } from '../services/logger';
 import { dictionaryService } from '../services/dictionary';
 import { getRandomText } from '../utils/textSelection';
 import WordTooltip from '../components/WordTooltip';
@@ -155,6 +156,13 @@ export default function Practice() {
 
   const loadRandomText = (diff: Difficulty) => {
     const item = getRandomText(diff);
+    if (!item || !item.content.trim()) {
+      // 重试或使用默认文本
+      startTransition(() => {
+        dispatch({ type: 'LOAD_TEXT', text: 'The quick brown fox jumps over the lazy dog.', loadedLength: 44 });
+      });
+      return;
+    }
     const text = item.content;
     startTransition(() => {
       dispatch({ type: 'LOAD_TEXT', text, loadedLength: computeInitialLoadedLength(text) });
@@ -164,13 +172,22 @@ export default function Practice() {
   // Progressive load: when user types near end of loaded portion, load more
   // (useEffect placed before useTypingEngine call so currentIndex is from engine below)
   const loadMoreRef = useRef<() => void>(undefined);
+  const isLoadingMoreRef = useRef(false);
   loadMoreRef.current = () => {
+    if (isLoadingMoreRef.current) return;
     if (loadedLength >= fullTextRef.current.length) return;
-    const nextLen = alignToWordBoundary(
+    isLoadingMoreRef.current = true;
+
+    const newLength = alignToWordBoundary(
       fullTextRef.current,
-      loadedLength + PRACTICE_CHUNK_SIZE
+      Math.min(loadedLength + PRACTICE_CHUNK_SIZE, fullTextRef.current.length)
     );
-    dispatch({ type: 'EXTEND_TEXT', loadedLength: Math.min(nextLen, fullTextRef.current.length) });
+    dispatch({ type: 'EXTEND_TEXT', loadedLength: newLength });
+
+    // 下一帧重置
+    requestAnimationFrame(() => {
+      isLoadingMoreRef.current = false;
+    });
   };
 
   const {
@@ -287,23 +304,23 @@ export default function Practice() {
   }, [currentIndex]);
 
   // --- Click to jump: click a non-word character to start typing from that position ---
-  const handleCharClick = useCallback((charIndex: number) => {
+  const handleCharClick = useCallback((charIndex: number, char: string) => {
     if (isFinished || phase === 'finished') return;
     // If the character is a word character, don't handle (let word lookup handle it)
-    const char = activeText[charIndex];
-    if (char && /[a-zA-Z0-9']/.test(char)) return;
+    if (/[a-zA-Z0-9']/.test(char)) return;
     jumpTo(charIndex);
     userScrollingRef.current = false;
     clearTimeout(scrollTimerRef.current);
     containerRef.current?.focus();
-  }, [isFinished, phase, jumpTo, activeText]);
+  }, [isFinished, phase, jumpTo]);
 
   const handleFinish = useCallback(() => {
     const result = getResult();
-    if (result.errorMap) {
-      storageService.saveTypingResult(result, result.errorMap);
-    } else {
-      storageService.saveResult(result);
+    const saved = result.errorMap
+      ? storageService.saveTypingResult(result, result.errorMap)
+      : storageService.saveResult(result);
+    if (!saved) {
+      logger.warn('Practice.handleFinish', '数据保存失败，存储空间可能不足');
     }
     dispatch({ type: 'FINISH' });
     dispatch({ type: 'SAVE_RESULT' });
@@ -322,19 +339,7 @@ export default function Practice() {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isStarted, isFinished, phase, handleFinish]);
 
-  // Save result when finished
-  useEffect(() => {
-    if (isFinished && !resultSaved) {
-      const result = getResult();
-      if (result.errorMap) {
-        storageService.saveTypingResult(result, result.errorMap);
-      } else {
-        storageService.saveResult(result);
-      }
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      dispatch({ type: 'SAVE_RESULT' });
-    }
-  }, [isFinished, resultSaved, getResult]);
+
 
   // Listen for Enter key when finished to load next text
   useEffect(() => {
@@ -382,7 +387,21 @@ export default function Practice() {
     settings,
   });
 
-  const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>, word: string, groupStartIndex: number) => {
+  // Map cache: O(1) lookup for word index by startIndex
+  const wordIdxMap = useMemo(() => {
+    const map = new Map<number, number>();
+    onlyWords.forEach((w, idx) => {
+      map.set(w.startIndex, idx);
+    });
+    return map;
+  }, [onlyWords]);
+
+  // Cache word strings to avoid creating new arrays on every click
+  const wordStrings = useMemo(() => {
+    return onlyWords.map(w => w.word);
+  }, [onlyWords]);
+
+  const handleWordClick = useCallback((e: React.MouseEvent | MouseEvent, word: string, groupStartIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -390,7 +409,7 @@ export default function Practice() {
     // Only look up actual words
     if (!/[a-zA-Z]/.test(word)) return;
 
-    const target = e.currentTarget;
+    const target = e.currentTarget as HTMLElement || e.target as HTMLElement;
     const rect = target.getBoundingClientRect();
 
     // Check if this word is part of a correlative phrase
@@ -407,11 +426,9 @@ export default function Practice() {
       return;
     }
 
-    // Find this word's index in the onlyWords array
-    const wordIdx = onlyWords.findIndex(w => w.startIndex === groupStartIndex);
-    if (wordIdx >= 0) {
-      // Extract just the word strings for phrase lookup
-      const wordStrings = onlyWords.map(w => w.word);
+    // Find this word's index using O(1) Map lookup
+    const wordIdx = wordIdxMap.get(groupStartIndex);
+    if (wordIdx !== undefined) {
       const phraseResult = dictionaryService.lookupPhrase(wordStrings, wordIdx);
       if (phraseResult) {
         // Highlight all word groups in the matched phrase
@@ -434,8 +451,6 @@ export default function Practice() {
     // No phrase match, fall back to single word lookup
     setHighlightedIndices(new Set());
 
-
-
     const entry = dictionaryService.lookup(word);
     if (entry) {
       setTooltip({
@@ -452,7 +467,27 @@ export default function Practice() {
         position: { x: rect.left, y: rect.bottom, width: rect.width, top: rect.top },
       });
     }
-  };
+  }, [correlativeMap, wordIdxMap, wordStrings, onlyWords]);
+
+  // Event delegation: single click handler for the entire text area
+  const handleTextAreaClick = useCallback((e: React.MouseEvent) => {
+    // Check if clicked on a word span (data-word-start attribute)
+    const wordTarget = (e.target as HTMLElement).closest('[data-word-start]') as HTMLElement | null;
+    if (wordTarget) {
+      const wordStart = parseInt(wordTarget.getAttribute('data-word-start')!, 10);
+      const word = wordTarget.getAttribute('data-word')!;
+      handleWordClick(e, word, wordStart);
+      return;
+    }
+
+    // Check if clicked on a character span (data-char-idx attribute)
+    const charTarget = e.target as HTMLElement;
+    const charIdx = charTarget.getAttribute('data-char-idx');
+    const char = charTarget.getAttribute('data-char');
+    if (charIdx !== null && char !== null) {
+      handleCharClick(parseInt(charIdx, 10), char);
+    }
+  }, [handleCharClick, handleWordClick]);
 
   const closeTooltip = useCallback(() => {
     setTooltip(null);
@@ -512,6 +547,7 @@ export default function Practice() {
               ref={textAreaRef}
               className="font-mono leading-relaxed tracking-wide break-all max-w-4xl mx-auto"
               style={{ fontSize: `${settings.fontSize}px` }}
+              onClick={handleTextAreaClick}
             >
               {/* Part 1: Before window - merged span for already-typed text */}
               {useWindowing && windowStartCharIdx > 0 && (
@@ -563,8 +599,9 @@ export default function Practice() {
                     <span
                       key={idx}
                       data-current={charState.status === 'current' ? 'true' : undefined}
+                      data-char-idx={idx}
+                      data-char={charState.char}
                       className={className}
-                      onClick={() => handleCharClick(idx)}
                     >
                       {charState.char === ' ' ? '\u00A0' : charState.char}
                     </span>
@@ -576,12 +613,13 @@ export default function Practice() {
                   return (
                     <Fragment key={`w-${group.startIndex}`}>
                       <span
+                        data-word-start={group.startIndex}
+                        data-word={group.word}
                         className={`cursor-pointer hover:underline hover:decoration-dashed hover:decoration-gray-400/40 dark:hover:decoration-gray-500/40 hover:underline-offset-4${
                           isHighlighted ? ' bg-indigo-100/60 dark:bg-indigo-900/40 rounded-sm' : ''
                         }${
                           isPhraseWord && !isHighlighted ? ' underline decoration-dashed decoration-gray-400 dark:decoration-gray-500 underline-offset-4' : ''
                         }`}
-                        onClick={(e) => handleWordClick(e, group.word, group.startIndex)}
                       >
                         {renderedChars}
                       </span>

@@ -20,21 +20,29 @@ export interface TextItem {
   title: string;
 }
 
-export interface Settings {
+export interface DisplaySettings {
   fontSize: number; // px
-  showLiveStats: boolean;
   theme: 'light' | 'dark';
-  difficulty: 'easy' | 'medium' | 'hard';
-  mode: PracticeMode;
-  timedDuration: TimedDuration;
+  showLiveStats: boolean;
+}
+
+export interface AudioSettings {
   soundEnabled: boolean; // 是否启用音效
   soundVolume: number; // 音量 0-1
-  phraseHighlight: boolean; // 是否高亮显示词组
-  // 词频相关设置
+}
+
+export interface FrequencySettings {
   freqHighlight: { h: boolean; m: boolean; l: boolean }; // 各频率是否着色标记
   freqAnnotation: { h: boolean; m: boolean; l: boolean }; // 各频率是否显示注释
   freqDimLow: boolean; // 是否灰色标记低频词(8001-20000)
   freqDimUltraLow: boolean; // 是否灰色标记超低频词(20000以外)
+}
+
+export interface Settings extends DisplaySettings, AudioSettings, FrequencySettings {
+  difficulty: 'easy' | 'medium' | 'hard';
+  mode: PracticeMode;
+  timedDuration: TimedDuration;
+  phraseHighlight: boolean; // 是否高亮显示词组
 }
 
 export type FreqLevel = 'h' | 'm' | 'l' | 'u';

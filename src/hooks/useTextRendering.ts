@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { dictionaryService } from '../services/dictionary';
 import type { Settings, FreqLevel } from '../types';
 
@@ -41,14 +41,118 @@ export interface UseTextRenderingResult {
   wordAnnotations: Map<number, string>;
 }
 
+/** Binary search: find the first group that overlaps with targetPos (startIndex + length > targetPos) */
+function binarySearchStart(groups: WordGroup[], targetPos: number): number {
+  let left = 0, right = groups.length - 1;
+  let result = 0;
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    if (groups[mid].startIndex + groups[mid].length <= targetPos) {
+      left = mid + 1;
+    } else {
+      result = mid;
+      right = mid - 1;
+    }
+  }
+  return result;
+}
+
+/** Binary search: find the first group whose startIndex >= targetPos */
+function binarySearchEnd(groups: WordGroup[], targetPos: number): number {
+  let left = 0, right = groups.length - 1;
+  let result = groups.length;
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    if (groups[mid].startIndex < targetPos) {
+      left = mid + 1;
+    } else {
+      result = mid;
+      right = mid - 1;
+    }
+  }
+  return result;
+}
+
+/**
+ * Shared text rendering hook for Practice and Reading pages.
+ * Handles word grouping, windowed rendering, phrase marking,
+ * word frequency analysis, and annotation generation.
+ *
+ * @param options - Configuration for text rendering
+ * @param options.text - The text content to process (may be progressively loaded subset)
+ * @param options.originalText - The full original text (for correlative matching context)
+ * @param options.currentIndex - Current typing position (Practice mode)
+ * @param options.visibleCenter - Estimated visible center character position (Reading mode)
+ * @param options.renderWindow - Number of characters to render around the center
+ * @param options.settings - User settings for frequency highlighting, annotations, etc.
+ */
 export function useTextRendering(options: UseTextRenderingOptions): UseTextRenderingResult {
   const { text, originalText, currentIndex, visibleCenter, renderWindow = 1500, settings } = options;
 
   // The center position for windowing: currentIndex (Practice) or visibleCenter (Reading)
   const centerPosition = currentIndex ?? visibleCenter ?? 0;
 
+  // Incremental wordGroups: avoid full rebuild when text is only appended
+  const prevTextRef = useRef('');
+  const prevGroupsRef = useRef<WordGroup[]>([]);
+
+  // Early return for empty text
+  const emptyResult: UseTextRenderingResult = useMemo(() => ({
+    wordGroups: [],
+    onlyWords: [],
+    windowStartGroupIdx: 0,
+    windowEndGroupIdx: 0,
+    windowStartCharIdx: 0,
+    windowEndCharIdx: 0,
+    useWindowing: false,
+    phraseMarkedIndices: new Set<number>(),
+    correlativeMap: new Map<number, CorrelativeInfo>(),
+    wordFrequencies: new Map<number, FreqLevel>(),
+    wordAnnotations: new Map<number, string>(),
+  }), []);
+
+  const isEmpty = !text;
+
   // Group text into words
   const wordGroups = useMemo(() => {
+    if (isEmpty) return [];
+
+    // If new text starts with the old text (pure append), only compute new portion
+    if (text.length > prevTextRef.current.length &&
+        text.startsWith(prevTextRef.current)) {
+      const newStart = prevTextRef.current.length;
+      const newGroups = [...prevGroupsRef.current];
+
+      // Fix last group if the old text's tail and new text's start belong to the same word
+      let i = newStart;
+      if (newGroups.length > 0) {
+        const lastGroup = newGroups[newGroups.length - 1];
+        const lastGroupEnd = lastGroup.startIndex + lastGroup.length;
+        if (lastGroupEnd === newStart && /[a-zA-Z'-]/.test(text[newStart])) {
+          newGroups.pop();
+          i = lastGroup.startIndex;
+        }
+      }
+
+      // Parse from i onwards
+      while (i < text.length) {
+        if (/[a-zA-Z'-]/.test(text[i])) {
+          let j = i;
+          while (j < text.length && /[a-zA-Z'-]/.test(text[j])) j++;
+          newGroups.push({ word: text.slice(i, j), startIndex: i, length: j - i });
+          i = j;
+        } else {
+          newGroups.push({ word: text[i], startIndex: i, length: 1 });
+          i++;
+        }
+      }
+
+      prevTextRef.current = text;
+      prevGroupsRef.current = newGroups;
+      return newGroups;
+    }
+
+    // Full rebuild for new text
     const groups: WordGroup[] = [];
     let i = 0;
     while (i < text.length) {
@@ -64,17 +168,21 @@ export function useTextRendering(options: UseTextRenderingOptions): UseTextRende
         i++;
       }
     }
+
+    prevTextRef.current = text;
+    prevGroupsRef.current = groups;
     return groups;
-  }, [text]);
+  }, [text, isEmpty]);
 
   // Build only-word list for phrase lookup
   const onlyWords = useMemo(() => {
+    if (isEmpty) return [];
     return wordGroups
       .map((g, idx) => ({ ...g, groupIndex: idx }))
       .filter(g => /[a-zA-Z]/.test(g.word));
   }, [wordGroups]);
 
-  // Windowed rendering: compute window boundaries
+  // Windowed rendering: compute window boundaries using binary search
   const { windowStartGroupIdx, windowEndGroupIdx, windowStartCharIdx, windowEndCharIdx, useWindowing } = useMemo(() => {
     if (text.length < renderWindow * 2) {
       return { windowStartGroupIdx: 0, windowEndGroupIdx: wordGroups.length, windowStartCharIdx: 0, windowEndCharIdx: text.length, useWindowing: false };
@@ -83,23 +191,11 @@ export function useTextRendering(options: UseTextRenderingOptions): UseTextRende
     const rawStart = Math.max(0, centerPosition - renderWindow);
     const rawEnd = Math.min(text.length, centerPosition + renderWindow);
 
-    // Find first wordGroup that overlaps with rawStart
-    let startIdx = 0;
-    for (let i = 0; i < wordGroups.length; i++) {
-      if (wordGroups[i].startIndex + wordGroups[i].length > rawStart) {
-        startIdx = i;
-        break;
-      }
-    }
+    // Binary search: first group overlapping rawStart
+    const startIdx = binarySearchStart(wordGroups, rawStart);
 
-    // Find last wordGroup that overlaps with rawEnd
-    let endIdx = wordGroups.length;
-    for (let i = wordGroups.length - 1; i >= 0; i--) {
-      if (wordGroups[i].startIndex < rawEnd) {
-        endIdx = i + 1;
-        break;
-      }
-    }
+    // Binary search: first group whose startIndex >= rawEnd (i.e. endIdx = that index)
+    const endIdx = binarySearchEnd(wordGroups, rawEnd);
 
     const wsChar = wordGroups[startIdx]?.startIndex ?? 0;
     const weChar = endIdx < wordGroups.length ? wordGroups[endIdx].startIndex : text.length;
@@ -227,6 +323,8 @@ export function useTextRendering(options: UseTextRenderingOptions): UseTextRende
     return annotations;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wordGroups, settings.freqAnnotation, useWindowing, windowStartGroupIdx, windowEndGroupIdx, dictionaryService.isLoaded()]);
+
+  if (isEmpty) return emptyResult;
 
   return {
     wordGroups,
