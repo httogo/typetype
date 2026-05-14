@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: Settings = {
   timedDuration: 30,
   soundEnabled: false,
   soundVolume: 0.5,
+  phraseHighlight: true,
 };
 
 export const storageService = {

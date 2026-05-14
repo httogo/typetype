@@ -1,73 +1,77 @@
-# React + TypeScript + Vite
+# TypeType - 打字练习
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+提升你的英文打字速度和准确率。
 
-Currently, two official plugins are available:
+## 在线体验
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+https://typetype-theta.vercel.app/
 
-## React Compiler
+## 功能特性
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 核心练习
+- 极简打字界面，专注于文本输入
+- 实时 WPM（每分钟词数）和准确率统计
+- 全文模式 / 限时模式
+- 简单 / 中等 / 困难三级难度
+- 3秒无操作智能暂停计时
+- Tab 重新开始 | Enter 下一篇 | Esc 结束
 
-## Expanding the ESLint configuration
+### 词典与学习
+- 点击单词查看音标和中文释义（2万词条离线词典）
+- 1000+ 高频词组自动标记（覆盖四六级/考研/雅思/托福/GRE/高考）
+- 33种关联词组模式识别（as...as, not only...but also 等）
+- 词组提示开关可配置
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 练习数据
+- 历史记录与 WPM 趋势图
+- 错误按键热力图（QWERTY 键盘可视化）
+- 数据导出（JSON/CSV）/ 导入
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 个性化
+- 明暗主题切换（平滑过渡）
+- 可选打字音效（机械键盘风格）
+- 自定义练习文本
+- 字体大小调节
+- PWA 支持（可安装、离线使用）
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 技术栈
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- React 19 + TypeScript
+- Vite
+- Tailwind CSS
+- React Router
+- Recharts（趋势图）
+- Web Audio API（音效）
+- vite-plugin-pwa（PWA）
+- ECDICT（离线词典数据源）
+
+## 本地开发
+
+```bash
+# 安装依赖
+npm install
+
+# 开发模式
+npm run dev
+
+# 构建
+npm run build
+
+# 预览构建结果
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 词典数据
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+词典基于 [ECDICT](https://github.com/skywind3000/ECDICT) 开源数据，包含 2 万高频英文单词及 1000+ 词组。
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+重新生成词典：
+```bash
+# 需要先下载 ECDICT SQLite 数据库到 /tmp
+node scripts/generate-dict.cjs
+node scripts/generate-phrases.cjs
 ```
+
+## 许可证
+
+MIT

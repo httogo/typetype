@@ -1,0 +1,1817 @@
+{
+  "consecutive": [
+    {
+      "phrase": "get ahead of",
+      "t": "超过；胜过"
+    },
+    {
+      "phrase": "get at",
+      "t": "达到；得到；掌握"
+    },
+    {
+      "phrase": "account for",
+      "t": "占(比例)；解释；说明"
+    },
+    {
+      "phrase": "adapt to",
+      "t": "适应"
+    },
+    {
+      "phrase": "adapt for",
+      "t": "改编；改写"
+    },
+    {
+      "phrase": "appeal to",
+      "t": "对...有吸引力；呼吁"
+    },
+    {
+      "phrase": "appeal for",
+      "t": "为...呼吁；请求"
+    },
+    {
+      "phrase": "apply for",
+      "t": "申请"
+    },
+    {
+      "phrase": "apply to",
+      "t": "适用于；应用"
+    },
+    {
+      "phrase": "approve of",
+      "t": "赞成；同意"
+    },
+    {
+      "phrase": "back off",
+      "t": "后退；退缩"
+    },
+    {
+      "phrase": "back out of",
+      "t": "逃避；退出"
+    },
+    {
+      "phrase": "beat around the bush",
+      "t": "绕圈子；拐弯抹角"
+    },
+    {
+      "phrase": "beat down",
+      "t": "击倒；砍价"
+    },
+    {
+      "phrase": "beat off",
+      "t": "击退；打败"
+    },
+    {
+      "phrase": "become of",
+      "t": "发生在...身上"
+    },
+    {
+      "phrase": "become aware of",
+      "t": "意识到"
+    },
+    {
+      "phrase": "begin with",
+      "t": "以...开始"
+    },
+    {
+      "phrase": "belong to",
+      "t": "属于"
+    },
+    {
+      "phrase": "commit a crime",
+      "t": "犯罪"
+    },
+    {
+      "phrase": "commit suicide",
+      "t": "自杀"
+    },
+    {
+      "phrase": "commit oneself to",
+      "t": "承诺；致力于"
+    },
+    {
+      "phrase": "commit to",
+      "t": "承诺；交付"
+    },
+    {
+      "phrase": "conduct research",
+      "t": "进行研究"
+    },
+    {
+      "phrase": "conduct a survey",
+      "t": "进行调查"
+    },
+    {
+      "phrase": "conduct business",
+      "t": "经营业务"
+    },
+    {
+      "phrase": "exert influence",
+      "t": "施加影响"
+    },
+    {
+      "phrase": "exert pressure",
+      "t": "施加压力"
+    },
+    {
+      "phrase": "in addition to",
+      "t": "除...之外"
+    },
+    {
+      "phrase": "for the sake of",
+      "t": "为了"
+    },
+    {
+      "phrase": "by and large",
+      "t": "总的来说"
+    },
+    {
+      "phrase": "cope with",
+      "t": "处理；应对"
+    },
+    {
+      "phrase": "jump at",
+      "t": "急于接受；贪心地要"
+    },
+    {
+      "phrase": "jump down",
+      "t": "跳下"
+    },
+    {
+      "phrase": "jump on",
+      "t": "跳上；急忙去做"
+    },
+    {
+      "phrase": "keep down",
+      "t": "压低；控制"
+    },
+    {
+      "phrase": "keep off",
+      "t": "不接近；防止"
+    },
+    {
+      "phrase": "keep watch",
+      "t": "守护；留意"
+    },
+    {
+      "phrase": "kick about",
+      "t": "到处流浪"
+    },
+    {
+      "phrase": "kick back",
+      "t": "反弹；给予回报"
+    },
+    {
+      "phrase": "kick down",
+      "t": "踢倒"
+    },
+    {
+      "phrase": "kick out",
+      "t": "踢出；赶出"
+    },
+    {
+      "phrase": "knock about",
+      "t": "到处流浪；粗暴对待"
+    },
+    {
+      "phrase": "knock at",
+      "t": "敲；批评"
+    },
+    {
+      "phrase": "knock back",
+      "t": "使吃惊；拒绝"
+    },
+    {
+      "phrase": "knock into",
+      "t": "碰撞；敲入"
+    },
+    {
+      "phrase": "knock off",
+      "t": "打掉；停工"
+    },
+    {
+      "phrase": "knock on",
+      "t": "敲；叩"
+    },
+    {
+      "phrase": "knock over",
+      "t": "推翻；击倒"
+    },
+    {
+      "phrase": "know about",
+      "t": "了解；知道"
+    },
+    {
+      "phrase": "know by",
+      "t": "凭...认出"
+    },
+    {
+      "phrase": "know from",
+      "t": "与...区分开"
+    },
+    {
+      "phrase": "lag behind",
+      "t": "落后；滞后"
+    },
+    {
+      "phrase": "latch on to",
+      "t": "紧紧抓住；缠着不放"
+    },
+    {
+      "phrase": "lean against",
+      "t": "倚靠；靠着"
+    },
+    {
+      "phrase": "lean back",
+      "t": "向后倾；靠后"
+    },
+    {
+      "phrase": "lean out",
+      "t": "倚身向外"
+    },
+    {
+      "phrase": "lean to",
+      "t": "倾向于；倾斜"
+    },
+    {
+      "phrase": "lean toward",
+      "t": "倾向于；趋向"
+    },
+    {
+      "phrase": "leap at",
+      "t": "急忙接受；欣然同意"
+    },
+    {
+      "phrase": "leap back",
+      "t": "跳回"
+    },
+    {
+      "phrase": "leap down",
+      "t": "跳下"
+    },
+    {
+      "phrase": "leap for",
+      "t": "为...而跳跃"
+    },
+    {
+      "phrase": "leap on",
+      "t": "跳到...上；猛然出击"
+    },
+    {
+      "phrase": "leap over",
+      "t": "跳过"
+    },
+    {
+      "phrase": "leap up",
+      "t": "跳起"
+    },
+    {
+      "phrase": "learn about",
+      "t": "了解；学到"
+    },
+    {
+      "phrase": "learn by heart",
+      "t": "背诵；记住"
+    },
+    {
+      "phrase": "learn by rote",
+      "t": "死记硬背"
+    },
+    {
+      "phrase": "learn from",
+      "t": "从...学习"
+    },
+    {
+      "phrase": "learn of",
+      "t": "得知；听说"
+    },
+    {
+      "phrase": "leave alone",
+      "t": "不打扰；单独留下"
+    },
+    {
+      "phrase": "leave aside",
+      "t": "撇开；不考虑"
+    },
+    {
+      "phrase": "leave away",
+      "t": "取消；省略"
+    },
+    {
+      "phrase": "leave behind",
+      "t": "留下；遗忘"
+    },
+    {
+      "phrase": "leave for",
+      "t": "前往；出发去"
+    },
+    {
+      "phrase": "leave off",
+      "t": "停止；中断"
+    },
+    {
+      "phrase": "leave on",
+      "t": "继续开着；穿着不脱"
+    },
+    {
+      "phrase": "leave over",
+      "t": "剩下；延迟"
+    },
+    {
+      "phrase": "leave to",
+      "t": "留给...决定"
+    },
+    {
+      "phrase": "let alone",
+      "t": "更不用说；不打扰"
+    },
+    {
+      "phrase": "let be",
+      "t": "让...保持原状"
+    },
+    {
+      "phrase": "let in",
+      "t": "让...进来；认识到"
+    },
+    {
+      "phrase": "let into",
+      "t": "告诉；让...知道"
+    },
+    {
+      "phrase": "let loose",
+      "t": "释放；放任"
+    },
+    {
+      "phrase": "let off",
+      "t": "放过；免责；开火"
+    },
+    {
+      "phrase": "let on",
+      "t": "透露；泄露"
+    },
+    {
+      "phrase": "let out",
+      "t": "放出；泄露；租出"
+    },
+    {
+      "phrase": "let slip",
+      "t": "说漏嘴；让...溜走"
+    },
+    {
+      "phrase": "let through",
+      "t": "让...通过"
+    },
+    {
+      "phrase": "lie about",
+      "t": "谎称；谎言涉及"
+    },
+    {
+      "phrase": "lie ahead",
+      "t": "在前面；等待"
+    },
+    {
+      "phrase": "lie around",
+      "t": "到处放着；闲散"
+    },
+    {
+      "phrase": "lie at",
+      "t": "位于；取决于"
+    },
+    {
+      "phrase": "lie back",
+      "t": "躺回去；松懈"
+    },
+    {
+      "phrase": "lie behind",
+      "t": "隐藏在...后面"
+    },
+    {
+      "phrase": "lie by",
+      "t": "搁置；不管"
+    },
+    {
+      "phrase": "lie down",
+      "t": "躺下；停止抵抗"
+    },
+    {
+      "phrase": "lie in",
+      "t": "在于；原因是"
+    },
+    {
+      "phrase": "lie low",
+      "t": "躲藏；保持低调"
+    },
+    {
+      "phrase": "lie off",
+      "t": "停止；不在乎"
+    },
+    {
+      "phrase": "lie on",
+      "t": "依赖；位于"
+    },
+    {
+      "phrase": "lie over",
+      "t": "延期；搁置"
+    },
+    {
+      "phrase": "lie to",
+      "t": "位置在；等待"
+    },
+    {
+      "phrase": "lie under",
+      "t": "处于...下面；受...支配"
+    },
+    {
+      "phrase": "lie with",
+      "t": "取决于；在...的权力范围内"
+    },
+    {
+      "phrase": "light a fire",
+      "t": "点火；激起热情"
+    },
+    {
+      "phrase": "light into",
+      "t": "猛烈抨击"
+    },
+    {
+      "phrase": "light on",
+      "t": "发现；偶然碰到"
+    },
+    {
+      "phrase": "light out",
+      "t": "匆匆离开"
+    },
+    {
+      "phrase": "light up",
+      "t": "点亮；高兴起来"
+    },
+    {
+      "phrase": "like for",
+      "t": "倾向于要求"
+    },
+    {
+      "phrase": "limit to",
+      "t": "限制于；局限于"
+    },
+    {
+      "phrase": "line with",
+      "t": "用...做衬里；排满"
+    },
+    {
+      "phrase": "link to",
+      "t": "链接到；联系"
+    },
+    {
+      "phrase": "link up",
+      "t": "连接；会合"
+    },
+    {
+      "phrase": "link with",
+      "t": "与...联系"
+    },
+    {
+      "phrase": "listen for",
+      "t": "听；留意"
+    },
+    {
+      "phrase": "listen in",
+      "t": "偷听；旁听"
+    },
+    {
+      "phrase": "listen to",
+      "t": "听；倾听"
+    },
+    {
+      "phrase": "live by",
+      "t": "靠...维生；遵守"
+    },
+    {
+      "phrase": "live down",
+      "t": "逐渐消除...的恶影响"
+    },
+    {
+      "phrase": "live for",
+      "t": "为...而活"
+    },
+    {
+      "phrase": "live in",
+      "t": "住在...里面"
+    },
+    {
+      "phrase": "live out",
+      "t": "做完；不在家"
+    },
+    {
+      "phrase": "live through",
+      "t": "经历；度过"
+    },
+    {
+      "phrase": "live with",
+      "t": "与...同居；承受；接受"
+    },
+    {
+      "phrase": "load down",
+      "t": "装满；压重"
+    },
+    {
+      "phrase": "load on",
+      "t": "装上；加载"
+    },
+    {
+      "phrase": "load up",
+      "t": "装满；进行装载"
+    },
+    {
+      "phrase": "load with",
+      "t": "用...装满；使负担"
+    },
+    {
+      "phrase": "lock away",
+      "t": "锁起来；封闭"
+    },
+    {
+      "phrase": "lock down",
+      "t": "锁定；防守"
+    },
+    {
+      "phrase": "lock in",
+      "t": "锁上；套牢"
+    },
+    {
+      "phrase": "lock into",
+      "t": "陷入；锁定在"
+    },
+    {
+      "phrase": "lock on",
+      "t": "锁定；追踪"
+    },
+    {
+      "phrase": "lock out",
+      "t": "把...锁在外面；封锁"
+    },
+    {
+      "phrase": "loop back",
+      "t": "循环回来"
+    },
+    {
+      "phrase": "loop in",
+      "t": "在...中打圈；参与"
+    },
+    {
+      "phrase": "loose off",
+      "t": "射出；发射"
+    },
+    {
+      "phrase": "lose by",
+      "t": "输掉；被夺去"
+    },
+    {
+      "phrase": "lose face",
+      "t": "丢脸；失去信誉"
+    },
+    {
+      "phrase": "lose ground",
+      "t": "失去优势；走下坡路"
+    },
+    {
+      "phrase": "lose heart",
+      "t": "灰心；失去勇气"
+    },
+    {
+      "phrase": "lose in",
+      "t": "沉溺于；陷入...中"
+    },
+    {
+      "phrase": "lose no time",
+      "t": "毫不延迟；尽快"
+    },
+    {
+      "phrase": "lose one's head",
+      "t": "失去理智；惊慌失措"
+    },
+    {
+      "phrase": "lose sight of",
+      "t": "忽视；看不见；失去联系"
+    },
+    {
+      "phrase": "lose steam",
+      "t": "失去动力"
+    },
+    {
+      "phrase": "lost in",
+      "t": "沉溺于；陷入...中"
+    },
+    {
+      "phrase": "lot with",
+      "t": "与...共命运"
+    },
+    {
+      "phrase": "loud mouth",
+      "t": "大嘴巴；话多的人"
+    },
+    {
+      "phrase": "love for",
+      "t": "对...的热爱"
+    },
+    {
+      "phrase": "lower away",
+      "t": "放下；用绳索放下"
+    },
+    {
+      "phrase": "lower to",
+      "t": "降低到"
+    },
+    {
+      "phrase": "loyal to",
+      "t": "对...忠诚"
+    },
+    {
+      "phrase": "lump together",
+      "t": "混为一谈；合并"
+    },
+    {
+      "phrase": "lump with",
+      "t": "与...混在一起"
+    },
+    {
+      "phrase": "lurk about",
+      "t": "潜伏；伺机"
+    },
+    {
+      "phrase": "lurk behind",
+      "t": "藏在...后面"
+    },
+    {
+      "phrase": "make a face",
+      "t": "做鬼脸"
+    },
+    {
+      "phrase": "make a fuss",
+      "t": "大惊小怪"
+    },
+    {
+      "phrase": "make a go of",
+      "t": "成功地进行"
+    },
+    {
+      "phrase": "make a living",
+      "t": "谋生"
+    },
+    {
+      "phrase": "make a note of",
+      "t": "记下；注意"
+    },
+    {
+      "phrase": "make a point of",
+      "t": "坚持要；确保"
+    },
+    {
+      "phrase": "make a stand",
+      "t": "坚守立场"
+    },
+    {
+      "phrase": "make believe",
+      "t": "假装；伪装"
+    },
+    {
+      "phrase": "make bold",
+      "t": "勇敢地"
+    },
+    {
+      "phrase": "make do",
+      "t": "凑合；将就"
+    },
+    {
+      "phrase": "make for",
+      "t": "趋向；有利于"
+    },
+    {
+      "phrase": "make friends with",
+      "t": "与...交朋友"
+    },
+    {
+      "phrase": "make fun of",
+      "t": "嘲笑；开玩笑"
+    },
+    {
+      "phrase": "make good",
+      "t": "成功；弥补"
+    },
+    {
+      "phrase": "make good on",
+      "t": "履行；实现"
+    },
+    {
+      "phrase": "make haste",
+      "t": "赶快；加快速度"
+    },
+    {
+      "phrase": "make hay",
+      "t": "乘机获利"
+    },
+    {
+      "phrase": "make heads or tails of",
+      "t": "理解；弄清"
+    },
+    {
+      "phrase": "make headway",
+      "t": "进展；取得进展"
+    },
+    {
+      "phrase": "make it up",
+      "t": "弥补；化妆"
+    },
+    {
+      "phrase": "make jokes at",
+      "t": "讥笑；嘲笑"
+    },
+    {
+      "phrase": "make known",
+      "t": "通知；宣布"
+    },
+    {
+      "phrase": "make legal",
+      "t": "合法化"
+    },
+    {
+      "phrase": "make light of",
+      "t": "轻视；不重视"
+    },
+    {
+      "phrase": "make like",
+      "t": "假装；模仿"
+    },
+    {
+      "phrase": "make little of",
+      "t": "轻视；贬低"
+    },
+    {
+      "phrase": "make love",
+      "t": "谈情说爱；性交"
+    },
+    {
+      "phrase": "make mention of",
+      "t": "提及；提到"
+    },
+    {
+      "phrase": "make much of",
+      "t": "重视；宠爱"
+    },
+    {
+      "phrase": "make no bones about",
+      "t": "毫不隐讳；直言"
+    },
+    {
+      "phrase": "make nothing of",
+      "t": "不理解；轻视"
+    },
+    {
+      "phrase": "make one's mark",
+      "t": "留下印记；成名"
+    },
+    {
+      "phrase": "make out",
+      "t": "理解；辨认；做出；接吻"
+    },
+    {
+      "phrase": "make play with",
+      "t": "利用；利用...取乐"
+    },
+    {
+      "phrase": "make provision for",
+      "t": "为...做准备"
+    },
+    {
+      "phrase": "make ready",
+      "t": "准备好"
+    },
+    {
+      "phrase": "make request for",
+      "t": "请求；要求"
+    },
+    {
+      "phrase": "make shift",
+      "t": "临时代用；将就"
+    },
+    {
+      "phrase": "make short work of",
+      "t": "迅速处理"
+    },
+    {
+      "phrase": "make the grade",
+      "t": "成功；取得成绩"
+    },
+    {
+      "phrase": "make tracks",
+      "t": "迅速离开；逃跑"
+    },
+    {
+      "phrase": "make up one's mind",
+      "t": "下定决心"
+    },
+    {
+      "phrase": "make with",
+      "t": "拿出；提供"
+    },
+    {
+      "phrase": "in accordance with",
+      "t": "按照；符合"
+    },
+    {
+      "phrase": "at the expense of",
+      "t": "以...为代价"
+    },
+    {
+      "phrase": "on account of",
+      "t": "由于；因为"
+    },
+    {
+      "phrase": "on the grounds of",
+      "t": "基于...的理由"
+    },
+    {
+      "phrase": "justify in",
+      "t": "在...方面有理由"
+    },
+    {
+      "phrase": "labor at",
+      "t": "辛苦从事"
+    },
+    {
+      "phrase": "labor for",
+      "t": "为...而劳动"
+    },
+    {
+      "phrase": "labor in",
+      "t": "在...中努力"
+    },
+    {
+      "phrase": "labor on",
+      "t": "继续劳动"
+    },
+    {
+      "phrase": "lack for",
+      "t": "缺少；不足"
+    },
+    {
+      "phrase": "lack in",
+      "t": "在...方面缺乏"
+    },
+    {
+      "phrase": "lade with",
+      "t": "用...装载"
+    },
+    {
+      "phrase": "lament for",
+      "t": "为...哀悼"
+    },
+    {
+      "phrase": "lament over",
+      "t": "对...哀悼"
+    },
+    {
+      "phrase": "launch at",
+      "t": "猛然投掷"
+    },
+    {
+      "phrase": "launch forth",
+      "t": "开始；进行"
+    },
+    {
+      "phrase": "launch from",
+      "t": "从...发射"
+    },
+    {
+      "phrase": "launch into",
+      "t": "着手进行；开始"
+    },
+    {
+      "phrase": "lecture at",
+      "t": "在...讲演"
+    },
+    {
+      "phrase": "lecture on",
+      "t": "讲授；讲演"
+    },
+    {
+      "phrase": "lecture to",
+      "t": "向...讲演"
+    },
+    {
+      "phrase": "lend a hand",
+      "t": "帮一把手"
+    },
+    {
+      "phrase": "lend an ear",
+      "t": "倾听；听取意见"
+    },
+    {
+      "phrase": "lend color to",
+      "t": "增加...的可能性"
+    },
+    {
+      "phrase": "lend credence to",
+      "t": "使...更可信"
+    },
+    {
+      "phrase": "lend one's voice to",
+      "t": "支持；赞成"
+    },
+    {
+      "phrase": "lend support to",
+      "t": "支持；帮助"
+    },
+    {
+      "phrase": "locate at",
+      "t": "位于；坐落在"
+    },
+    {
+      "phrase": "locate in",
+      "t": "位于...中"
+    },
+    {
+      "phrase": "loom ahead",
+      "t": "逐渐显现；迫在眼前"
+    },
+    {
+      "phrase": "loom at",
+      "t": "威胁；迫近"
+    },
+    {
+      "phrase": "loom up",
+      "t": "隐约显现；迫近"
+    },
+    {
+      "phrase": "lodge against",
+      "t": "提出...抱怨"
+    },
+    {
+      "phrase": "lodge at",
+      "t": "暂住；抵达"
+    },
+    {
+      "phrase": "lodge in",
+      "t": "嵌入；住在"
+    },
+    {
+      "phrase": "lodge with",
+      "t": "寄宿；存放"
+    },
+    {
+      "phrase": "be bound to",
+      "t": "必然会；一定"
+    },
+    {
+      "phrase": "be supposed to",
+      "t": "应该；据说"
+    },
+    {
+      "phrase": "be subject to",
+      "t": "受...支配；需要审批"
+    },
+    {
+      "phrase": "be prone to",
+      "t": "易于；倾向于"
+    },
+    {
+      "phrase": "be apt to",
+      "t": "很可能；易于"
+    },
+    {
+      "phrase": "be inclined to",
+      "t": "倾向于"
+    },
+    {
+      "phrase": "be liable to",
+      "t": "可能会；易于"
+    },
+    {
+      "phrase": "stem from",
+      "t": "源于；起源于"
+    },
+    {
+      "phrase": "boil down to",
+      "t": "归根结底；本质上是"
+    },
+    {
+      "phrase": "come down to",
+      "t": "最终取决于；本来就是"
+    },
+    {
+      "phrase": "amount to",
+      "t": "总计；等同于"
+    },
+    {
+      "phrase": "confine to",
+      "t": "限制于；局限于"
+    },
+    {
+      "phrase": "confine oneself to",
+      "t": "把自己限制在"
+    },
+    {
+      "phrase": "consist of",
+      "t": "由...组成"
+    },
+    {
+      "phrase": "consist in",
+      "t": "在于；存在于"
+    },
+    {
+      "phrase": "devote to",
+      "t": "致力于；奉献给"
+    },
+    {
+      "phrase": "devote oneself to",
+      "t": "献身于；专心致志于"
+    },
+    {
+      "phrase": "distinguish between",
+      "t": "区分...和..."
+    },
+    {
+      "phrase": "distinguish from",
+      "t": "与...不同；区别于"
+    },
+    {
+      "phrase": "pose a threat",
+      "t": "构成威胁；带来危险"
+    },
+    {
+      "phrase": "pose a challenge",
+      "t": "构成挑战"
+    },
+    {
+      "phrase": "pose a problem",
+      "t": "造成问题"
+    },
+    {
+      "phrase": "undergo changes",
+      "t": "经历变化"
+    },
+    {
+      "phrase": "undergo reform",
+      "t": "进行改革"
+    },
+    {
+      "phrase": "undergo transformation",
+      "t": "经历转变"
+    },
+    {
+      "phrase": "yield results",
+      "t": "产生结果；有成效"
+    },
+    {
+      "phrase": "yield benefits",
+      "t": "产生好处"
+    },
+    {
+      "phrase": "yield to",
+      "t": "屈服于；让步"
+    },
+    {
+      "phrase": "impose restrictions",
+      "t": "施加限制；实施限制"
+    },
+    {
+      "phrase": "impose a fine",
+      "t": "处以罚款"
+    },
+    {
+      "phrase": "impose on",
+      "t": "强加；利用"
+    },
+    {
+      "phrase": "with respect to",
+      "t": "关于；就...而言"
+    },
+    {
+      "phrase": "in the wake of",
+      "t": "随着；在...之后"
+    },
+    {
+      "phrase": "in conjunction with",
+      "t": "结合；与...一起"
+    },
+    {
+      "phrase": "be used to",
+      "t": "习惯于"
+    },
+    {
+      "phrase": "be about to",
+      "t": "即将；正要"
+    },
+    {
+      "phrase": "be likely to",
+      "t": "可能会"
+    },
+    {
+      "phrase": "be willing to",
+      "t": "愿意"
+    },
+    {
+      "phrase": "have difficulty in",
+      "t": "在...方面有困难"
+    },
+    {
+      "phrase": "have trouble with",
+      "t": "在...方面有麻烦"
+    },
+    {
+      "phrase": "have trouble doing",
+      "t": "做...有困难"
+    },
+    {
+      "phrase": "make contributions to",
+      "t": "对...做出贡献"
+    },
+    {
+      "phrase": "make progress in",
+      "t": "在...方面取得进展"
+    },
+    {
+      "phrase": "make sense of",
+      "t": "理解；弄懂"
+    },
+    {
+      "phrase": "abstain from",
+      "t": "放弃；不参与"
+    },
+    {
+      "phrase": "abound in",
+      "t": "富含；有很多"
+    },
+    {
+      "phrase": "accuse of",
+      "t": "指控；控告"
+    },
+    {
+      "phrase": "acquiesce in",
+      "t": "默许；同意"
+    },
+    {
+      "phrase": "adhere to",
+      "t": "遵守；粘住"
+    },
+    {
+      "phrase": "afford an opportunity",
+      "t": "提供机会"
+    },
+    {
+      "phrase": "rely on",
+      "t": "依靠；信任"
+    },
+    {
+      "phrase": "rely upon",
+      "t": "依靠；信任"
+    },
+    {
+      "phrase": "depend on",
+      "t": "取决于；依赖"
+    },
+    {
+      "phrase": "depend upon",
+      "t": "取决于；依赖"
+    },
+    {
+      "phrase": "respond to",
+      "t": "回应；做出反应"
+    },
+    {
+      "phrase": "respond with",
+      "t": "用...回应"
+    },
+    {
+      "phrase": "contribute to",
+      "t": "促成；为...做出贡献"
+    },
+    {
+      "phrase": "focus on",
+      "t": "专注于"
+    },
+    {
+      "phrase": "concentrate on",
+      "t": "集中于；专注于"
+    },
+    {
+      "phrase": "interfere with",
+      "t": "干扰；妨碍"
+    },
+    {
+      "phrase": "interfere in",
+      "t": "干涉；介入"
+    },
+    {
+      "phrase": "engage in",
+      "t": "从事；参与"
+    },
+    {
+      "phrase": "engage with",
+      "t": "与...相互作用"
+    },
+    {
+      "phrase": "participate in",
+      "t": "参与"
+    },
+    {
+      "phrase": "hesitate to",
+      "t": "犹豫；不愿"
+    },
+    {
+      "phrase": "hesitate over",
+      "t": "对...犹豫"
+    },
+    {
+      "phrase": "persist in",
+      "t": "坚持；持续"
+    },
+    {
+      "phrase": "persist with",
+      "t": "坚持做"
+    },
+    {
+      "phrase": "insist on",
+      "t": "坚持；主张"
+    },
+    {
+      "phrase": "insist upon",
+      "t": "坚持；主张"
+    },
+    {
+      "phrase": "settle for",
+      "t": "接受；同意"
+    },
+    {
+      "phrase": "settle with",
+      "t": "与...解决"
+    },
+    {
+      "phrase": "conform to",
+      "t": "符合；遵守"
+    },
+    {
+      "phrase": "conform with",
+      "t": "符合"
+    },
+    {
+      "phrase": "comply with",
+      "t": "遵守；服从"
+    },
+    {
+      "phrase": "deprive of",
+      "t": "剥夺"
+    },
+    {
+      "phrase": "derive from",
+      "t": "源于；来自"
+    },
+    {
+      "phrase": "derive at",
+      "t": "得出结论"
+    },
+    {
+      "phrase": "differ from",
+      "t": "与...不同"
+    },
+    {
+      "phrase": "differ in",
+      "t": "在...方面不同"
+    },
+    {
+      "phrase": "disregard for",
+      "t": "无视；不顾"
+    },
+    {
+      "phrase": "emerge from",
+      "t": "从...出现；来自"
+    },
+    {
+      "phrase": "exempt from",
+      "t": "豁免；免除"
+    },
+    {
+      "phrase": "excel in",
+      "t": "擅长"
+    },
+    {
+      "phrase": "excel at",
+      "t": "擅长"
+    },
+    {
+      "phrase": "exceed expectations",
+      "t": "超过预期"
+    },
+    {
+      "phrase": "exclude from",
+      "t": "排除"
+    },
+    {
+      "phrase": "exemplify by",
+      "t": "用...举例说明"
+    },
+    {
+      "phrase": "exhaust in",
+      "t": "用尽；耗尽"
+    },
+    {
+      "phrase": "exist in",
+      "t": "存在于"
+    },
+    {
+      "phrase": "exist on",
+      "t": "靠...生活"
+    },
+    {
+      "phrase": "expand into",
+      "t": "扩展成"
+    },
+    {
+      "phrase": "expand on",
+      "t": "扩展；详述"
+    },
+    {
+      "phrase": "expect from",
+      "t": "期望从...得到"
+    },
+    {
+      "phrase": "expend on",
+      "t": "花费在"
+    },
+    {
+      "phrase": "facilitate with",
+      "t": "用...便利"
+    },
+    {
+      "phrase": "fade away",
+      "t": "淡去；消退"
+    },
+    {
+      "phrase": "fade out",
+      "t": "逐渐消失"
+    },
+    {
+      "phrase": "fail in",
+      "t": "在...方面失败"
+    },
+    {
+      "phrase": "fail to",
+      "t": "未能；没有"
+    },
+    {
+      "phrase": "get about",
+      "t": "走遍；旅行"
+    },
+    {
+      "phrase": "get down to",
+      "t": "开始认真处理"
+    },
+    {
+      "phrase": "go back on",
+      "t": "违反；背弃"
+    },
+    {
+      "phrase": "go into",
+      "t": "进入；从事"
+    },
+    {
+      "phrase": "grasp at",
+      "t": "抓住；急切地寻求"
+    },
+    {
+      "phrase": "hang on to",
+      "t": "紧紧抓住"
+    },
+    {
+      "phrase": "harbor doubt",
+      "t": "心有疑虑"
+    },
+    {
+      "phrase": "head off",
+      "t": "拦截；阻止"
+    },
+    {
+      "phrase": "head toward",
+      "t": "朝...方向前进"
+    },
+    {
+      "phrase": "hinge on",
+      "t": "取决于；依赖于"
+    },
+    {
+      "phrase": "hold back",
+      "t": "阻止；隐瞒"
+    },
+    {
+      "phrase": "hold down",
+      "t": "控制；压低"
+    },
+    {
+      "phrase": "identify with",
+      "t": "认同；与...一致"
+    },
+    {
+      "phrase": "illustrate with",
+      "t": "用...作例证"
+    },
+    {
+      "phrase": "immerse in",
+      "t": "沉浸于"
+    },
+    {
+      "phrase": "impinge on",
+      "t": "对...产生影响；侵犯"
+    },
+    {
+      "phrase": "implicate in",
+      "t": "使...牵连其中"
+    },
+    {
+      "phrase": "imply to",
+      "t": "暗示"
+    },
+    {
+      "phrase": "improve on",
+      "t": "改进；胜过"
+    },
+    {
+      "phrase": "incorporate into",
+      "t": "纳入；并入"
+    },
+    {
+      "phrase": "incur in",
+      "t": "引发；招致"
+    },
+    {
+      "phrase": "indulge in",
+      "t": "沉溺于；放纵"
+    },
+    {
+      "phrase": "infer from",
+      "t": "从...推断"
+    },
+    {
+      "phrase": "inflict on",
+      "t": "对...造成伤害"
+    },
+    {
+      "phrase": "inhabit in",
+      "t": "住在；居住于"
+    },
+    {
+      "phrase": "inhibit from",
+      "t": "阻止；抑制"
+    },
+    {
+      "phrase": "inherit from",
+      "t": "继承"
+    },
+    {
+      "phrase": "initiate with",
+      "t": "用...开始"
+    },
+    {
+      "phrase": "inject into",
+      "t": "注入；灌输"
+    },
+    {
+      "phrase": "inquire about",
+      "t": "询问"
+    },
+    {
+      "phrase": "inquire into",
+      "t": "调查；探究"
+    },
+    {
+      "phrase": "inscribe in",
+      "t": "题写；记录"
+    },
+    {
+      "phrase": "inspire with",
+      "t": "激励；启发"
+    },
+    {
+      "phrase": "install in",
+      "t": "安装；安置"
+    },
+    {
+      "phrase": "instance by",
+      "t": "举...作例"
+    },
+    {
+      "phrase": "instigate to",
+      "t": "煽动；诱发"
+    },
+    {
+      "phrase": "institute for",
+      "t": "建立；创办"
+    },
+    {
+      "phrase": "instruct in",
+      "t": "教授；讲解"
+    },
+    {
+      "phrase": "insulate from",
+      "t": "隔离；使...不受影响"
+    },
+    {
+      "phrase": "insult to",
+      "t": "对...的侮辱"
+    },
+    {
+      "phrase": "intact with",
+      "t": "保持完整"
+    },
+    {
+      "phrase": "integrate into",
+      "t": "整合入；融入"
+    },
+    {
+      "phrase": "intend for",
+      "t": "打算给"
+    },
+    {
+      "phrase": "intend to",
+      "t": "想要；打算"
+    },
+    {
+      "phrase": "intensify in",
+      "t": "加强；恶化"
+    },
+    {
+      "phrase": "interact with",
+      "t": "相互作用；互动"
+    },
+    {
+      "phrase": "interact on",
+      "t": "产生相互作用"
+    },
+    {
+      "phrase": "intercede for",
+      "t": "为...说情；调停"
+    },
+    {
+      "phrase": "intercept from",
+      "t": "从...截获"
+    },
+    {
+      "phrase": "interchange with",
+      "t": "与...相互交换"
+    },
+    {
+      "phrase": "interest in",
+      "t": "对...感兴趣"
+    },
+    {
+      "phrase": "intermingle with",
+      "t": "与...混合"
+    },
+    {
+      "phrase": "interrupt in",
+      "t": "打断；中断"
+    },
+    {
+      "phrase": "intervene in",
+      "t": "干预；介入"
+    },
+    {
+      "phrase": "intervene between",
+      "t": "在...之间调停"
+    },
+    {
+      "phrase": "intrude into",
+      "t": "闯入；侵犯"
+    },
+    {
+      "phrase": "inundate with",
+      "t": "淹没；充斥"
+    },
+    {
+      "phrase": "invade into",
+      "t": "入侵；侵犯"
+    },
+    {
+      "phrase": "inveigh against",
+      "t": "猛烈抨击"
+    },
+    {
+      "phrase": "involve in",
+      "t": "卷入；涉及"
+    },
+    {
+      "phrase": "irk at",
+      "t": "惹怒；烦恼"
+    },
+    {
+      "phrase": "look down upon",
+      "t": "鄙视；俯视"
+    },
+    {
+      "phrase": "look to",
+      "t": "照顾；指望；注意"
+    },
+    {
+      "phrase": "on one hand",
+      "t": "一方面"
+    },
+    {
+      "phrase": "in order that",
+      "t": "以便；为了"
+    }
+  ],
+  "correlative": [
+    {
+      "pattern": [
+        "the",
+        "more",
+        "*",
+        "the",
+        "more"
+      ],
+      "t": "越...越",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "would",
+        "rather",
+        "*",
+        "than"
+      ],
+      "t": "宁愿...而不",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "prefer",
+        "*",
+        "to"
+      ],
+      "t": "更喜欢...而不是",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "not",
+        "*",
+        "until"
+      ],
+      "t": "直到...才",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "it",
+        "is",
+        "*",
+        "that"
+      ],
+      "t": "强调句型（...是...）",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "it",
+        "is",
+        "*",
+        "who"
+      ],
+      "t": "强调句型（是...的人）",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "too",
+        "*",
+        "to"
+      ],
+      "t": "太...而不能",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "enough",
+        "*",
+        "to"
+      ],
+      "t": "足够...以",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "so",
+        "*",
+        "as",
+        "to"
+      ],
+      "t": "如此...以至于",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "rather",
+        "*",
+        "than"
+      ],
+      "t": "与其...不如",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "on",
+        "one",
+        "hand",
+        "*",
+        "on",
+        "the",
+        "other"
+      ],
+      "t": "一方面...另一方面",
+      "maxGap": 10
+    },
+    {
+      "pattern": [
+        "first",
+        "*",
+        "then"
+      ],
+      "t": "首先...然后",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "not",
+        "because",
+        "*",
+        "but",
+        "because"
+      ],
+      "t": "不是因为...而是因为",
+      "maxGap": 10
+    },
+    {
+      "pattern": [
+        "although",
+        "*",
+        "yet"
+      ],
+      "t": "虽然...但是",
+      "maxGap": 10
+    },
+    {
+      "pattern": [
+        "although",
+        "*",
+        "still"
+      ],
+      "t": "虽然...但是",
+      "maxGap": 10
+    },
+    {
+      "pattern": [
+        "if",
+        "*",
+        "then"
+      ],
+      "t": "如果...那么",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "unless",
+        "*",
+        "otherwise"
+      ],
+      "t": "除非...否则",
+      "maxGap": 10
+    },
+    {
+      "pattern": [
+        "hardly",
+        "*",
+        "before"
+      ],
+      "t": "刚...就",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "scarcely",
+        "*",
+        "when"
+      ],
+      "t": "刚...就",
+      "maxGap": 5
+    },
+    {
+      "pattern": [
+        "not",
+        "only",
+        "*",
+        "but",
+        "as",
+        "well"
+      ],
+      "t": "不仅...而且",
+      "maxGap": 5
+    }
+  ]
+}

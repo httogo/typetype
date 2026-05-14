@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTypingEngine } from '../hooks/useTypingEngine';
 import { useSettings } from '../context/SettingsContext';
 import { storageService } from '../services/storage';
+import { dictionaryService } from '../services/dictionary';
 import { getRandomText } from '../utils/textSelection';
+import WordTooltip from '../components/WordTooltip';
 import type { Settings } from '../types';
 
 type Difficulty = Settings['difficulty'];
@@ -21,6 +23,22 @@ export default function Practice() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLDivElement>(null);
+
+  // Tooltip state
+  const [tooltip, setTooltip] = useState<{
+    word: string;
+    phonetic: string;
+    translation: string;
+    position: { x: number; y: number; width: number; top: number };
+  } | null>(null);
+
+  // Phrase highlight state: set of wordGroup startIndex values that belong to the highlighted phrase
+  const [highlightedIndices, setHighlightedIndices] = useState<Set<number>>(new Set());
+
+  // Load dictionary on mount
+  useEffect(() => {
+    dictionaryService.load();
+  }, []);
 
   // Load initial text
   useEffect(() => {
@@ -157,6 +175,163 @@ export default function Practice() {
 
   const timeDisplay = mode === 'timed' && remaining !== null ? remaining : elapsed;
 
+  // Group chars into words for click handling
+  const wordGroups = useMemo(() => {
+    const groups: { word: string; startIndex: number; length: number }[] = [];
+    let i = 0;
+    while (i < currentText.length) {
+      if (/[a-zA-Z'-]/.test(currentText[i])) {
+        // Start of a word
+        let j = i;
+        while (j < currentText.length && /[a-zA-Z'-]/.test(currentText[j])) {
+          j++;
+        }
+        groups.push({ word: currentText.slice(i, j), startIndex: i, length: j - i });
+        i = j;
+      } else {
+        // Non-word char (space, punctuation, etc.)
+        groups.push({ word: currentText[i], startIndex: i, length: 1 });
+        i++;
+      }
+    }
+    return groups;
+  }, [currentText]);
+
+  // Build a list of only word groups (for phrase lookup)
+  const onlyWords = useMemo(() => {
+    return wordGroups
+      .map((g, idx) => ({ ...g, groupIndex: idx }))
+      .filter(g => /[a-zA-Z]/.test(g.word));
+  }, [wordGroups]);
+
+  // Pre-compute which word startIndices belong to a phrase (for auto phrase highlight)
+  // Also compute correlative phrase indices
+  const { phraseMarkedIndices, correlativeMap } = useMemo(() => {
+    const marked = new Set<number>();
+    // correlativeMap: startIndex -> { indices (startIndex[]), translation, patternLabel }
+    const corrMap = new Map<number, { indices: number[]; translation: string; patternLabel: string }>();
+
+    if (!settings.phraseHighlight || !dictionaryService.isLoaded()) {
+      return { phraseMarkedIndices: marked, correlativeMap: corrMap };
+    }
+
+    const wordStrings = onlyWords.map(w => w.word);
+
+    // 1. Continuous phrase matching
+    let i = 0;
+    while (i < onlyWords.length) {
+      const result = dictionaryService.lookupPhrase(wordStrings, i);
+      if (result) {
+        for (let k = i; k < i + result.length; k++) {
+          marked.add(onlyWords[k].startIndex);
+        }
+        i += result.length;
+      } else {
+        i++;
+      }
+    }
+
+    // 2. Correlative (non-continuous) phrase matching
+    const usedByCorrelative = new Set<number>(); // word indices already matched
+    for (let wi = 0; wi < onlyWords.length; wi++) {
+      if (usedByCorrelative.has(wi)) continue;
+      const result = dictionaryService.matchCorrelative(wordStrings, wi);
+      if (result) {
+        // Mark all keyword indices
+        const startIndices = result.indices.map(idx => onlyWords[idx].startIndex);
+        for (const idx of result.indices) {
+          usedByCorrelative.add(idx);
+          marked.add(onlyWords[idx].startIndex);
+        }
+        // Store in correlativeMap keyed by each keyword's startIndex
+        for (const si of startIndices) {
+          corrMap.set(si, {
+            indices: startIndices,
+            translation: result.translation,
+            patternLabel: result.patternLabel,
+          });
+        }
+      }
+    }
+
+    return { phraseMarkedIndices: marked, correlativeMap: corrMap };
+  }, [onlyWords, settings.phraseHighlight]);
+
+  const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>, word: string, groupStartIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Only look up actual words
+    if (!/[a-zA-Z]/.test(word)) return;
+
+    const target = e.currentTarget;
+    const rect = target.getBoundingClientRect();
+
+    // Check if this word is part of a correlative phrase
+    const corrInfo = correlativeMap.get(groupStartIndex);
+    if (corrInfo) {
+      const newHighlight = new Set(corrInfo.indices);
+      setHighlightedIndices(newHighlight);
+      setTooltip({
+        word: corrInfo.patternLabel,
+        phonetic: '',
+        translation: corrInfo.translation,
+        position: { x: rect.left, y: rect.bottom, width: rect.width, top: rect.top },
+      });
+      return;
+    }
+
+    // Find this word's index in the onlyWords array
+    const wordIdx = onlyWords.findIndex(w => w.startIndex === groupStartIndex);
+    if (wordIdx >= 0) {
+      // Extract just the word strings for phrase lookup
+      const wordStrings = onlyWords.map(w => w.word);
+      const phraseResult = dictionaryService.lookupPhrase(wordStrings, wordIdx);
+      if (phraseResult) {
+        // Highlight all word groups in the matched phrase
+        const phraseWordGroups = onlyWords.slice(wordIdx, wordIdx + phraseResult.length);
+        const newHighlight = new Set(phraseWordGroups.map(w => w.startIndex));
+        setHighlightedIndices(newHighlight);
+
+        // Calculate bounding rect spanning all phrase words for tooltip position
+        const phraseText = phraseWordGroups.map(w => w.word).join(' ');
+        setTooltip({
+          word: phraseText,
+          phonetic: phraseResult.entry.p,
+          translation: phraseResult.entry.t,
+          position: { x: rect.left, y: rect.bottom, width: rect.width, top: rect.top },
+        });
+        return;
+      }
+    }
+
+    // No phrase match, fall back to single word lookup
+    setHighlightedIndices(new Set());
+    const entry = dictionaryService.lookup(word);
+    if (entry) {
+      setTooltip({
+        word,
+        phonetic: entry.p,
+        translation: entry.t,
+        position: { x: rect.left, y: rect.bottom, width: rect.width, top: rect.top },
+      });
+    } else {
+      setTooltip({
+        word,
+        phonetic: '',
+        translation: '未收录',
+        position: { x: rect.left, y: rect.bottom, width: rect.width, top: rect.top },
+      });
+    }
+  };
+
+  const closeTooltip = useCallback(() => {
+    setTooltip(null);
+    setHighlightedIndices(new Set());
+    // Restore focus to typing area
+    containerRef.current?.focus();
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -200,32 +375,69 @@ export default function Practice() {
               className="font-mono leading-relaxed tracking-wide break-all max-w-4xl mx-auto"
               style={{ fontSize: `${settings.fontSize}px` }}
             >
-              {chars.map((charState, idx) => {
-                const className = (() => {
-                  switch (charState.status) {
-                    case 'correct':
-                      return 'char-transition text-emerald-500 dark:text-emerald-400';
-                    case 'incorrect':
-                      return 'char-transition text-red-400 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-sm';
-                    case 'current':
-                      return 'char-transition border-l-2 border-indigo-500 animate-cursor text-gray-800 dark:text-gray-100';
-                    case 'pending':
-                    default:
-                      return 'char-transition text-gray-300 dark:text-gray-500';
-                  }
-                })();
-                return (
-                  <span
-                    key={idx}
-                    data-current={charState.status === 'current' ? 'true' : undefined}
-                    className={className}
-                  >
-                    {charState.char === ' ' ? '\u00A0' : charState.char}
-                  </span>
-                );
+              {wordGroups.map((group) => {
+                const isWord = /[a-zA-Z]/.test(group.word);
+                const charSlice = chars.slice(group.startIndex, group.startIndex + group.length);
+
+                const renderedChars = charSlice.map((charState, i) => {
+                  const idx = group.startIndex + i;
+                  const className = (() => {
+                    switch (charState.status) {
+                      case 'correct':
+                        return 'char-transition text-emerald-500 dark:text-emerald-400';
+                      case 'incorrect':
+                        return 'char-transition text-red-400 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-sm';
+                      case 'current':
+                        return 'char-transition border-l-2 border-indigo-500 animate-cursor text-gray-800 dark:text-gray-100';
+                      case 'pending':
+                      default:
+                        return 'char-transition text-gray-300 dark:text-gray-500';
+                    }
+                  })();
+                  return (
+                    <span
+                      key={idx}
+                      data-current={charState.status === 'current' ? 'true' : undefined}
+                      className={className}
+                    >
+                      {charState.char === ' ' ? '\u00A0' : charState.char}
+                    </span>
+                  );
+                });
+
+                if (isWord) {
+                  const isHighlighted = highlightedIndices.has(group.startIndex);
+                  const isPhraseWord = phraseMarkedIndices.has(group.startIndex);
+                  return (
+                    <span
+                      key={`w-${group.startIndex}`}
+                      className={`cursor-pointer hover:underline hover:decoration-dashed hover:decoration-gray-400/40 dark:hover:decoration-gray-500/40 hover:underline-offset-4${
+                        isHighlighted ? ' bg-indigo-100/60 dark:bg-indigo-900/40 rounded-sm' : ''
+                      }${
+                        isPhraseWord && !isHighlighted ? ' underline decoration-dashed underline-offset-4' : ''
+                      }`}
+                      onClick={(e) => handleWordClick(e, group.word, group.startIndex)}
+                    >
+                      {renderedChars}
+                    </span>
+                  );
+                }
+
+                return <span key={`s-${group.startIndex}`}>{renderedChars}</span>;
               })}
             </div>
           </div>
+
+          {/* Word Tooltip */}
+          {tooltip && (
+            <WordTooltip
+              word={tooltip.word}
+              phonetic={tooltip.phonetic}
+              translation={tooltip.translation}
+              position={tooltip.position}
+              onClose={closeTooltip}
+            />
+          )}
 
           {/* Bottom hint */}
           {!isStarted && (

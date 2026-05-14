@@ -29,6 +29,7 @@ export interface Settings {
   timedDuration: TimedDuration;
   soundEnabled: boolean; // 是否启用音效
   soundVolume: number; // 音量 0-1
+  phraseHighlight: boolean; // 是否高亮显示词组
 }
 
 export type CharStatus = 'correct' | 'incorrect' | 'current' | 'pending';
