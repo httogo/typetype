@@ -25,6 +25,7 @@ interface UseTypingEngineReturn {
   handleKeyDown: (e: KeyboardEvent) => void;
   reset: () => void;
   getResult: () => TypingResult;
+  jumpTo: (index: number) => void;
 }
 
 function initChars(text: string): CharState[] {
@@ -109,10 +110,30 @@ export function useTypingEngine({
     timerRef.current.reset();
   }, [text]);
 
-  // Reset when text changes
+  // Track previous text for progressive loading detection
+  const prevTextRef = useRef(text);
+
+  // Handle text changes: append if text grows (progressive loading) or reset if completely different
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    reset();
+    const prevText = prevTextRef.current;
+    prevTextRef.current = text;
+
+    if (text === prevText) return;
+
+    // If new text is a superset (starts with old text), append new chars
+    if (text.length > prevText.length && text.startsWith(prevText)) {
+      const newPart = text.substring(prevText.length);
+      const newChars: CharState[] = newPart.split('').map(c => ({
+        char: c,
+        status: 'pending' as const,
+      }));
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setChars(prev => [...prev, ...newChars]);
+    } else {
+      // Completely different text - full reset
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      reset();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text]);
 
@@ -245,6 +266,25 @@ export function useTypingEngine({
     }
   }, [isFinished]);
 
+  const jumpTo = useCallback((index: number) => {
+    const targetIndex = Math.max(0, Math.min(index, text.length));
+    setCurrentIndex((prev) => {
+      setChars((prevChars) => {
+        const updated = [...prevChars];
+        // Remove current marker from old position
+        if (prev < updated.length && updated[prev].status === 'current') {
+          updated[prev] = { ...updated[prev], status: 'pending' };
+        }
+        // Set new current position
+        if (targetIndex < updated.length) {
+          updated[targetIndex] = { ...updated[targetIndex], status: 'current' };
+        }
+        return updated;
+      });
+      return targetIndex;
+    });
+  }, [text.length]);
+
   const getResult = useCallback((): TypingResult => {
     const { correctCount: cc, incorrectCount: ic, totalTyped: tt, chars: ch } = stateRef.current;
     const duration = timerRef.current.elapsed;
@@ -278,5 +318,6 @@ export function useTypingEngine({
     handleKeyDown,
     reset,
     getResult,
+    jumpTo,
   };
 }

@@ -61,3 +61,24 @@ export interface TypingState {
   incorrectCount: number;
   totalTyped: number;
 }
+
+export interface Chapter {
+  id: string;       // 章节唯一 ID（如 "ch-1"）
+  title: string;    // 章节标题
+  content: string;  // 章节内容
+}
+
+export interface SavedArticle {
+  id: string;         // 唯一 ID（时间戳或 UUID）
+  title: string;      // 文章标题
+  content: string;    // 文章正文（保留完整内容，向后兼容）
+  source?: string;    // 来源（URL 或 "手动输入"）
+  createdAt: number;  // 保存时间戳
+  chapters?: Chapter[]; // 章节列表（可选）
+}
+
+export interface ExtractResponse {
+  title: string;
+  content: string;
+  length: number;
+}

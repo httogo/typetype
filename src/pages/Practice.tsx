@@ -1,14 +1,80 @@
-import { useState, useEffect, useRef, useCallback, useMemo, Fragment } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useReducer, useTransition, Fragment } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTypingEngine } from '../hooks/useTypingEngine';
+import { useTextRendering } from '../hooks/useTextRendering';
 import { useSettings } from '../context/SettingsContext';
 import { storageService } from '../services/storage';
 import { dictionaryService } from '../services/dictionary';
 import { getRandomText } from '../utils/textSelection';
 import WordTooltip from '../components/WordTooltip';
-import type { Settings, FreqLevel } from '../types';
+import { PracticeStatsBar } from '../components/PracticeStatsBar';
+import { PracticeResultCard } from '../components/PracticeResultCard';
+import type { Settings } from '../types';
 
 type Difficulty = Settings['difficulty'];
+
+const RENDER_WINDOW = 1500;
+const PRACTICE_CHUNK_SIZE = 5000;
+const PRACTICE_LOAD_THRESHOLD = 2000;
+
+/** Align a split position to the nearest word boundary (space/newline) */
+function alignToWordBoundary(text: string, pos: number): number {
+  if (pos >= text.length) return text.length;
+  // Search forward for a space or newline
+  for (let i = pos; i < Math.min(pos + 100, text.length); i++) {
+    if (text[i] === ' ' || text[i] === '\n') return i + 1;
+  }
+  return pos;
+}
+
+function computeInitialLoadedLength(text: string): number {
+  return text.length <= PRACTICE_CHUNK_SIZE
+    ? text.length
+    : alignToWordBoundary(text, PRACTICE_CHUNK_SIZE);
+}
+
+type PracticePhase = 'loading' | 'ready' | 'typing' | 'finished';
+
+interface PracticeState {
+  phase: PracticePhase;
+  currentText: string;
+  loadedLength: number;
+  resultSaved: boolean;
+}
+
+type PracticeAction =
+  | { type: 'LOAD_TEXT'; text: string; loadedLength: number }
+  | { type: 'EXTEND_TEXT'; loadedLength: number }
+  | { type: 'START_TYPING' }
+  | { type: 'FINISH' }
+  | { type: 'SAVE_RESULT' }
+  | { type: 'RESET'; text: string; loadedLength: number };
+
+function practiceReducer(state: PracticeState, action: PracticeAction): PracticeState {
+  switch (action.type) {
+    case 'LOAD_TEXT':
+      return { phase: 'ready', currentText: action.text, loadedLength: action.loadedLength, resultSaved: false };
+    case 'EXTEND_TEXT':
+      return { ...state, loadedLength: action.loadedLength };
+    case 'START_TYPING':
+      return state.phase === 'ready' ? { ...state, phase: 'typing' } : state;
+    case 'FINISH':
+      return { ...state, phase: 'finished' };
+    case 'SAVE_RESULT':
+      return { ...state, resultSaved: true };
+    case 'RESET':
+      return { phase: 'ready', currentText: action.text, loadedLength: action.loadedLength, resultSaved: false };
+    default:
+      return state;
+  }
+}
+
+const initialPracticeState: PracticeState = {
+  phase: 'loading',
+  currentText: '',
+  loadedLength: 0,
+  resultSaved: false,
+};
 
 export default function Practice() {
   const location = useLocation();
@@ -16,13 +82,17 @@ export default function Practice() {
 
   const { difficulty, mode, timedDuration } = settings;
 
-  // State for text management
-  const [currentText, setCurrentText] = useState('');
-  const [resultSaved, setResultSaved] = useState(false);
-  const [manuallyFinished, setManuallyFinished] = useState(false);
+  // Combined state machine for practice lifecycle
+  const [state, dispatch] = useReducer(practiceReducer, initialPracticeState);
+  const { phase, currentText, loadedLength, resultSaved } = state;
+
+  // Progressive loading ref
+  const fullTextRef = useRef('');
+  const [isPending, startTransition] = useTransition();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<{
@@ -40,11 +110,25 @@ export default function Practice() {
     dictionaryService.load();
   }, []);
 
+  // Compute the active text (progressively loaded portion)
+  const activeText = useMemo(() => {
+    if (currentText.length <= PRACTICE_CHUNK_SIZE) return currentText;
+    return currentText.substring(0, loadedLength);
+  }, [currentText, loadedLength]);
+
+  // Sync fullTextRef when currentText changes
+  useEffect(() => {
+    fullTextRef.current = currentText;
+  }, [currentText]);
+
   // Load initial text
   useEffect(() => {
-    const state = location.state as { text?: string; title?: string } | null;
-    if (state?.text) {
-      setCurrentText(state.text);
+    const locState = location.state as { text?: string; title?: string } | null;
+    if (locState?.text) {
+      const text = locState.text!;
+      startTransition(() => {
+        dispatch({ type: 'LOAD_TEXT', text, loadedLength: computeInitialLoadedLength(text) });
+      });
       window.history.replaceState({}, document.title);
     } else {
       loadRandomText(difficulty);
@@ -66,14 +150,27 @@ export default function Practice() {
       prevModeRef.current = mode;
       prevTimedRef.current = timedDuration;
       loadRandomText(difficulty);
-      setResultSaved(false);
-      setManuallyFinished(false);
     }
   }, [difficulty, mode, timedDuration]);
 
   const loadRandomText = (diff: Difficulty) => {
     const item = getRandomText(diff);
-    setCurrentText(item.content);
+    const text = item.content;
+    startTransition(() => {
+      dispatch({ type: 'LOAD_TEXT', text, loadedLength: computeInitialLoadedLength(text) });
+    });
+  };
+
+  // Progressive load: when user types near end of loaded portion, load more
+  // (useEffect placed before useTypingEngine call so currentIndex is from engine below)
+  const loadMoreRef = useRef<() => void>(undefined);
+  loadMoreRef.current = () => {
+    if (loadedLength >= fullTextRef.current.length) return;
+    const nextLen = alignToWordBoundary(
+      fullTextRef.current,
+      loadedLength + PRACTICE_CHUNK_SIZE
+    );
+    dispatch({ type: 'EXTEND_TEXT', loadedLength: Math.min(nextLen, fullTextRef.current.length) });
   };
 
   const {
@@ -88,63 +185,161 @@ export default function Practice() {
     remaining,
     reset,
     getResult,
-  } = useTypingEngine({ text: currentText, mode, timedDuration });
+    jumpTo,
+  } = useTypingEngine({ text: activeText, mode, timedDuration });
+
+  // Sync phase to 'typing' when engine starts
+  useEffect(() => {
+    if (isStarted && phase === 'ready') {
+      dispatch({ type: 'START_TYPING' });
+    }
+  }, [isStarted, phase]);
+
+  // --- Scroll management: allow user manual scroll without auto-scroll interruption ---
+  const userScrollingRef = useRef(false);
+  const scrollTimerRef = useRef<number | undefined>(undefined);
+
+  const handleWheel = useCallback(() => {
+    userScrollingRef.current = true;
+    clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = window.setTimeout(() => {
+      userScrollingRef.current = false;
+    }, 3000); // 3秒后恢复自动滚动
+  }, []);
+
+  // Typing resumes auto-scroll
+  useEffect(() => {
+    if (currentIndex > 0) {
+      userScrollingRef.current = false;
+      clearTimeout(scrollTimerRef.current);
+    }
+  }, [currentIndex]);
+
+  // Trigger progressive loading when approaching end of loaded text
+  useEffect(() => {
+    if (
+      currentIndex >= loadedLength - PRACTICE_LOAD_THRESHOLD &&
+      loadedLength < fullTextRef.current.length
+    ) {
+      loadMoreRef.current?.();
+    }
+  }, [currentIndex, loadedLength]);
 
   // Auto-focus container on mount and after reset
   useEffect(() => {
     containerRef.current?.focus();
   }, [currentText]);
 
-  // Auto-scroll to current character
+  // Dynamic scroll-based fade mask
+  const [scrollState, setScrollState] = useState({ atTop: true, atBottom: false });
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const atTop = el.scrollTop < 20;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+    setScrollState(prev => {
+      if (prev.atTop === atTop && prev.atBottom === atBottom) return prev;
+      return { atTop, atBottom };
+    });
+  }, []);
+
+  const maskStyle = useMemo(() => {
+    const { atTop, atBottom } = scrollState;
+
+    if (atTop && atBottom) {
+      return {};
+    }
+
+    let gradient: string;
+    if (atTop && !atBottom) {
+      gradient = 'linear-gradient(to bottom, black 0%, black 85%, transparent 100%)';
+    } else if (!atTop && atBottom) {
+      gradient = 'linear-gradient(to bottom, transparent 0%, black 15%, black 100%)';
+    } else {
+      gradient = 'linear-gradient(to bottom, transparent 0%, black 10%, black 90%, transparent 100%)';
+    }
+
+    return {
+      maskImage: gradient,
+      WebkitMaskImage: gradient,
+    };
+  }, [scrollState]);
+
+  // Detect initial scroll state when text changes
   useEffect(() => {
+    if (scrollContainerRef.current) {
+      const el = scrollContainerRef.current;
+      const atTop = el.scrollTop < 20;
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+      setScrollState({ atTop, atBottom });
+    }
+  }, [currentText]);
+
+  // Auto-scroll to current character (respects user manual scrolling)
+  useEffect(() => {
+    if (userScrollingRef.current) return;
     if (textAreaRef.current) {
       const currentSpan = textAreaRef.current.querySelector('[data-current="true"]');
       if (currentSpan) {
-        currentSpan.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        currentSpan.scrollIntoView({ block: 'center', behavior: 'auto' });
       }
     }
   }, [currentIndex]);
 
+  // --- Click to jump: click a non-word character to start typing from that position ---
+  const handleCharClick = useCallback((charIndex: number) => {
+    if (isFinished || phase === 'finished') return;
+    // If the character is a word character, don't handle (let word lookup handle it)
+    const char = activeText[charIndex];
+    if (char && /[a-zA-Z0-9']/.test(char)) return;
+    jumpTo(charIndex);
+    userScrollingRef.current = false;
+    clearTimeout(scrollTimerRef.current);
+    containerRef.current?.focus();
+  }, [isFinished, phase, jumpTo, activeText]);
+
   const handleFinish = useCallback(() => {
     const result = getResult();
-    storageService.saveResult(result);
     if (result.errorMap) {
-      storageService.updateErrorStats(result.errorMap);
+      storageService.saveTypingResult(result, result.errorMap);
+    } else {
+      storageService.saveResult(result);
     }
-    setResultSaved(true);
-    setManuallyFinished(true);
+    dispatch({ type: 'FINISH' });
+    dispatch({ type: 'SAVE_RESULT' });
   }, [getResult]);
 
   // Handle Escape key to finish early
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (isStarted && !isFinished && !manuallyFinished) {
+        if (isStarted && !isFinished && phase !== 'finished') {
           handleFinish();
         }
       }
     };
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [isStarted, isFinished, manuallyFinished, handleFinish]);
+  }, [isStarted, isFinished, phase, handleFinish]);
 
   // Save result when finished
   useEffect(() => {
     if (isFinished && !resultSaved) {
       const result = getResult();
-      storageService.saveResult(result);
       if (result.errorMap) {
-        storageService.updateErrorStats(result.errorMap);
+        storageService.saveTypingResult(result, result.errorMap);
+      } else {
+        storageService.saveResult(result);
       }
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setResultSaved(true);
+      dispatch({ type: 'SAVE_RESULT' });
     }
   }, [isFinished, resultSaved, getResult]);
 
   // Listen for Enter key when finished to load next text
   useEffect(() => {
     const handleEnter = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && (isFinished || manuallyFinished) && resultSaved) {
+      if (e.key === 'Enter' && (isFinished || phase === 'finished') && resultSaved) {
         e.preventDefault();
         loadNextText();
       }
@@ -152,152 +347,46 @@ export default function Practice() {
     window.addEventListener('keydown', handleEnter);
     return () => window.removeEventListener('keydown', handleEnter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFinished, manuallyFinished, resultSaved, difficulty]);
+  }, [isFinished, phase, resultSaved, difficulty]);
 
   const loadNextText = () => {
     loadRandomText(difficulty);
-    setResultSaved(false);
-    setManuallyFinished(false);
   };
 
   const handleReset = () => {
+    dispatch({ type: 'RESET', text: currentText, loadedLength: computeInitialLoadedLength(fullTextRef.current) });
     reset();
-    setResultSaved(false);
-    setManuallyFinished(false);
     containerRef.current?.focus();
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const timeDisplay = mode === 'timed' && remaining !== null ? remaining : elapsed;
 
-  // Group chars into words for click handling
-  const wordGroups = useMemo(() => {
-    const groups: { word: string; startIndex: number; length: number }[] = [];
-    let i = 0;
-    while (i < currentText.length) {
-      if (/[a-zA-Z'-]/.test(currentText[i])) {
-        // Start of a word
-        let j = i;
-        while (j < currentText.length && /[a-zA-Z'-]/.test(currentText[j])) {
-          j++;
-        }
-        groups.push({ word: currentText.slice(i, j), startIndex: i, length: j - i });
-        i = j;
-      } else {
-        // Non-word char (space, punctuation, etc.)
-        groups.push({ word: currentText[i], startIndex: i, length: 1 });
-        i++;
-      }
-    }
-    return groups;
-  }, [currentText]);
-
-  // Build a list of only word groups (for phrase lookup)
-  const onlyWords = useMemo(() => {
-    return wordGroups
-      .map((g, idx) => ({ ...g, groupIndex: idx }))
-      .filter(g => /[a-zA-Z]/.test(g.word));
-  }, [wordGroups]);
-
-  // Pre-compute which word startIndices belong to a phrase (for auto phrase highlight)
-  // Also compute correlative phrase indices
-  const { phraseMarkedIndices, correlativeMap } = useMemo(() => {
-    const marked = new Set<number>();
-    // correlativeMap: startIndex -> { indices (startIndex[]), translation, patternLabel }
-    const corrMap = new Map<number, { indices: number[]; translation: string; patternLabel: string }>();
-
-    if (!settings.phraseHighlight || !dictionaryService.isLoaded()) {
-      return { phraseMarkedIndices: marked, correlativeMap: corrMap };
-    }
-
-    const wordStrings = onlyWords.map(w => w.word);
-
-    // 1. Continuous phrase matching
-    let i = 0;
-    while (i < onlyWords.length) {
-      const result = dictionaryService.lookupPhrase(wordStrings, i);
-      if (result) {
-        for (let k = i; k < i + result.length; k++) {
-          marked.add(onlyWords[k].startIndex);
-        }
-        i += result.length;
-      } else {
-        i++;
-      }
-    }
-
-    // 2. Correlative (non-continuous) phrase matching
-    const usedByCorrelative = new Set<number>(); // word indices already matched
-    for (let wi = 0; wi < onlyWords.length; wi++) {
-      if (usedByCorrelative.has(wi)) continue;
-      const result = dictionaryService.matchCorrelative(wordStrings, wi);
-      if (result) {
-        // Mark all keyword indices
-        const startIndices = result.indices.map(idx => onlyWords[idx].startIndex);
-        for (const idx of result.indices) {
-          usedByCorrelative.add(idx);
-          marked.add(onlyWords[idx].startIndex);
-        }
-        // Store in correlativeMap keyed by each keyword's startIndex
-        for (const si of startIndices) {
-          corrMap.set(si, {
-            indices: startIndices,
-            translation: result.translation,
-            patternLabel: result.patternLabel,
-          });
-        }
-      }
-    }
-
-    return { phraseMarkedIndices: marked, correlativeMap: corrMap };
-  }, [onlyWords, settings.phraseHighlight]);
-
-  // Pre-compute word frequencies
-  const wordFrequencies = useMemo(() => {
-    const freqMap = new Map<number, FreqLevel>();
-    if (!dictionaryService.isLoaded()) return freqMap;
-    wordGroups.forEach((group) => {
-      if (/[a-zA-Z]/.test(group.word)) {
-        const freq = dictionaryService.getFrequency(group.word);
-        freqMap.set(group.startIndex, freq);
-      }
-    });
-    return freqMap;
-  }, [wordGroups, dictionaryService.isLoaded()]);
-
-  // Pre-compute word annotations (inline parenthetical translations)
-  const wordAnnotations = useMemo(() => {
-    const annotations = new Map<number, string>();
-    if (!dictionaryService.isLoaded()) return annotations;
-    wordGroups.forEach((group, idx) => {
-      if (!/[a-zA-Z]/.test(group.word)) return;
-      const freq = dictionaryService.getFrequency(group.word);
-      const shouldAnnotate =
-        (freq === 'h' && settings.freqAnnotation.h) ||
-        (freq === 'm' && settings.freqAnnotation.m) ||
-        (freq === 'l' && settings.freqAnnotation.l);
-      if (!shouldAnnotate) return;
-      const entry = dictionaryService.lookup(group.word);
-      if (entry && entry.t) {
-        // 去掉词性，只取第一个翻译
-        let line = entry.t.split('\n')[0].trim();
-        line = line.replace(/^[a-z]+\.\s*/i, '');
-        const first = line.split(/[,;，；、]/)[0].trim();
-        if (first) annotations.set(idx, first);
-      }
-    });
-    return annotations;
-  }, [wordGroups, settings.freqAnnotation, dictionaryService.isLoaded()]);
+  // Shared text rendering computations
+  const {
+    wordGroups,
+    onlyWords,
+    windowStartGroupIdx,
+    windowEndGroupIdx,
+    windowStartCharIdx,
+    windowEndCharIdx,
+    useWindowing,
+    phraseMarkedIndices,
+    correlativeMap,
+    wordFrequencies,
+    wordAnnotations,
+  } = useTextRendering({
+    text: activeText,
+    originalText: currentText,
+    currentIndex,
+    renderWindow: RENDER_WINDOW,
+    settings,
+  });
 
   const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>, word: string, groupStartIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
 
+    // Click on word = word lookup (not position jump)
     // Only look up actual words
     if (!/[a-zA-Z]/.test(word)) return;
 
@@ -379,43 +468,61 @@ export default function Practice() {
       className="outline-none w-full h-full flex flex-col"
     >
       {/* Top stats bar - compact one line */}
-      {settings.showLiveStats && !isFinished && !manuallyFinished && (
-        <div className="border-b border-gray-100 dark:border-gray-700">
-          <div className="max-w-4xl mx-auto px-4 sm:px-8 py-1.5 flex items-center text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-            <div className="flex items-center gap-4">
-              <span>WPM: <span className="font-medium text-gray-700 dark:text-gray-200">{wpm}</span></span>
-              <span>准确率: <span className="font-medium text-gray-700 dark:text-gray-200">{accuracy}%</span></span>
-              <span>{mode === 'timed' ? '剩余' : '用时'}: <span className="font-medium text-gray-700 dark:text-gray-200">{formatTime(timeDisplay)}</span></span>
-              <span>进度: <span className="font-medium text-gray-700 dark:text-gray-200">{currentIndex}/{chars.length}</span></span>
-            </div>
-          </div>
-        </div>
+      {settings.showLiveStats && !isFinished && phase !== 'finished' && (
+        <PracticeStatsBar
+          wpm={wpm}
+          accuracy={accuracy}
+          elapsed={elapsed}
+          timeDisplay={timeDisplay}
+          mode={mode}
+          currentIndex={currentIndex}
+          totalChars={chars.length}
+        />
       )}
 
       {/* Main Content */}
-      {(isFinished || manuallyFinished) && resultSaved ? (
+      {isPending ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">加载中...</p>
+        </div>
+      ) : (isFinished || phase === 'finished') && resultSaved ? (
         <div className="flex-1 flex items-center justify-center p-4">
-          <ResultCard result={getResult()} onReset={handleReset} onNext={loadNextText} formatTime={formatTime} />
+          <PracticeResultCard result={getResult()} onReset={handleReset} onNext={loadNextText} />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col relative">
+        <div className="flex-1 flex flex-col relative min-h-0">
           {/* Pause overlay */}
           {isPaused && isStarted && (
             <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-              <div className="animate-fade-in-scale bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-6 py-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600">
+              <div className="animate-fade-in-scale bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm px-6 py-3 rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 pointer-events-none">
                 <p className="text-sm text-gray-500 dark:text-gray-400">已暂停 — 继续输入恢复</p>
               </div>
             </div>
           )}
 
           {/* Text Display Area - fills available space */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-8"
+            style={maskStyle}
+            onScroll={handleScroll}
+            onWheel={handleWheel}
+          >
             <div
               ref={textAreaRef}
               className="font-mono leading-relaxed tracking-wide break-all max-w-4xl mx-auto"
               style={{ fontSize: `${settings.fontSize}px` }}
             >
-              {wordGroups.map((group, groupIdx) => {
+              {/* Part 1: Before window - merged span for already-typed text */}
+              {useWindowing && windowStartCharIdx > 0 && (
+                <span className="text-emerald-500 dark:text-emerald-400">
+                  {activeText.substring(0, windowStartCharIdx)}
+                </span>
+              )}
+
+              {/* Part 2: Active window - full per-character rendering */}
+              {wordGroups.slice(windowStartGroupIdx, windowEndGroupIdx).map((group, relIdx) => {
+                const groupIdx = windowStartGroupIdx + relIdx;
                 const isWord = /[a-zA-Z]/.test(group.word);
                 const charSlice = chars.slice(group.startIndex, group.startIndex + group.length);
 
@@ -439,17 +546,17 @@ export default function Practice() {
                   const className = (() => {
                     switch (charState.status) {
                       case 'correct':
-                        return 'char-transition text-emerald-500 dark:text-emerald-400';
+                        return 'char-transition text-emerald-500 dark:text-emerald-400 cursor-text';
                       case 'incorrect':
-                        return 'char-transition text-red-400 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-sm';
+                        return 'char-transition text-red-400 dark:text-red-400 bg-red-50 dark:bg-red-900/30 rounded-sm cursor-text';
                       case 'current':
-                        return 'char-transition border-l-2 border-indigo-500 animate-cursor text-gray-800 dark:text-gray-100';
+                        return 'char-transition border-l-2 border-indigo-500 animate-cursor text-gray-800 dark:text-gray-100 cursor-text';
                       case 'pending':
                       default:
                         if (freqColorClass) {
-                          return `char-transition ${freqColorClass}`;
+                          return `char-transition ${freqColorClass} cursor-text`;
                         }
-                        return 'char-transition text-gray-400 dark:text-gray-500';
+                        return 'char-transition text-gray-400 dark:text-gray-500 cursor-text';
                     }
                   })();
                   return (
@@ -457,6 +564,7 @@ export default function Practice() {
                       key={idx}
                       data-current={charState.status === 'current' ? 'true' : undefined}
                       className={className}
+                      onClick={() => handleCharClick(idx)}
                     >
                       {charState.char === ' ' ? '\u00A0' : charState.char}
                     </span>
@@ -493,8 +601,19 @@ export default function Practice() {
                   );
                 }
 
-                return <span key={`s-${group.startIndex}`}>{renderedChars}</span>;
+                return <span key={`s-${group.startIndex}`} className="cursor-text">{renderedChars}</span>;
               })}
+
+              {/* Part 3: After window - merged span for untyped text */}
+              {useWindowing && windowEndCharIdx < activeText.length && (
+                <span className="text-gray-400 dark:text-gray-500">
+                  {activeText.substring(windowEndCharIdx)}
+                </span>
+              )}
+              {/* Loading indicator when more text is available */}
+              {loadedLength < fullTextRef.current.length && (
+                <span className="text-gray-300 dark:text-gray-600 select-none"> ...</span>
+              )}
             </div>
           </div>
 
@@ -522,74 +641,6 @@ export default function Practice() {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-/* ---------- Result Card ---------- */
-
-function ResultCard({
-  result,
-  onReset,
-  onNext,
-  formatTime,
-}: {
-  result: { wpm: number; accuracy: number; duration: number; correctChars: number; incorrectChars: number };
-  onReset: () => void;
-  onNext: () => void;
-  formatTime: (s: number) => string;
-}) {
-  return (
-    <div className="w-full max-w-md text-center animate-fade-in">
-      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">练习完成</h2>
-
-      <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        {/* WPM Hero Number */}
-        <div className="mb-5">
-          <div className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent tabular-nums animate-count-up">
-            {result.wpm}
-          </div>
-          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">WPM</div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3">
-          <div className="relative bg-green-50 dark:bg-green-900/20 rounded-lg p-3 animate-count-up overflow-hidden" style={{ animationDelay: '0.1s', opacity: 0 }}>
-            <div className="text-xl font-bold text-green-600 dark:text-green-400 tabular-nums">{result.accuracy}%</div>
-            <div className="text-xs text-green-500 dark:text-green-400">准确率</div>
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-400"></div>
-          </div>
-          <div className="relative bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 animate-count-up overflow-hidden" style={{ animationDelay: '0.2s', opacity: 0 }}>
-            <div className="text-xl font-bold text-purple-600 dark:text-purple-400 tabular-nums">{formatTime(result.duration)}</div>
-            <div className="text-xs text-purple-500 dark:text-purple-400">用时</div>
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-400"></div>
-          </div>
-          <div className="relative bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 animate-count-up overflow-hidden" style={{ animationDelay: '0.3s', opacity: 0 }}>
-            <div className="text-lg font-bold tabular-nums">
-              <span className="text-green-600 dark:text-green-400">{result.correctChars}</span>
-              <span className="text-gray-400 dark:text-gray-500 mx-0.5">/</span>
-              <span className="text-red-500 dark:text-red-400">{result.incorrectChars}</span>
-            </div>
-            <div className="text-xs text-orange-500 dark:text-orange-400">正确/错误</div>
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-400"></div>
-          </div>
-        </div>
-      </div>
-
-      <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 animate-float">按 Enter 开始下一篇</p>
-      <div className="flex items-center justify-center gap-3">
-        <button
-          onClick={onNext}
-          className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 hover:shadow-md transition-all duration-200"
-        >
-          下一篇
-        </button>
-        <button
-          onClick={onReset}
-          className="px-5 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 hover:shadow-md transition-all duration-200"
-        >
-          重新练习
-        </button>
-      </div>
     </div>
   );
 }

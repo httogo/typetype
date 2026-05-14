@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 interface KeyboardHeatmapProps {
   errorStats: Record<string, { errors: number; total: number }>;
@@ -31,7 +31,7 @@ function getKeyLabel(key: string): string {
   return key;
 }
 
-export default function KeyboardHeatmap({ errorStats }: KeyboardHeatmapProps) {
+const KeyboardHeatmap = React.memo(function KeyboardHeatmap({ errorStats }: KeyboardHeatmapProps) {
   const [tooltip, setTooltip] = useState<{
     key: string;
     errors: number;
@@ -139,4 +139,7 @@ export default function KeyboardHeatmap({ errorStats }: KeyboardHeatmapProps) {
       )}
     </div>
   );
-}
+});
+
+KeyboardHeatmap.displayName = 'KeyboardHeatmap';
+export default KeyboardHeatmap;

@@ -1,15 +1,34 @@
-import { useState, useEffect, useCallback, useMemo, Fragment } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
+import { useTextRendering } from '../hooks/useTextRendering';
 import { dictionaryService } from '../services/dictionary';
 import { getRandomText } from '../utils/textSelection';
 import WordTooltip from '../components/WordTooltip';
-import type { FreqLevel } from '../types';
+
+const VISIBLE_BUFFER = 3000;
+const READING_CHUNK_SIZE = 8000;
+const READING_LOAD_THRESHOLD = 200; // px from bottom to trigger load
+
+/** Align a split position to the nearest word boundary (space/newline) */
+function alignToWordBoundary(text: string, pos: number): number {
+  if (pos >= text.length) return text.length;
+  for (let i = pos; i < Math.min(pos + 100, text.length); i++) {
+    if (text[i] === ' ' || text[i] === '\n') return i + 1;
+  }
+  return pos;
+}
 
 export default function Reading() {
+  const location = useLocation();
   const { settings } = useSettings();
   const { difficulty } = settings;
 
   const [currentText, setCurrentText] = useState('');
+
+  // Progressive loading state
+  const fullTextRef = useRef('');
+  const [loadedLength, setLoadedLength] = useState(0);
 
   // Tooltip state
   const [tooltip, setTooltip] = useState<{
@@ -22,6 +41,25 @@ export default function Reading() {
   // Phrase highlight state
   const [highlightedIndices, setHighlightedIndices] = useState<Set<number>>(new Set());
 
+  // Scroll-based windowing state
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [visibleCenter, setVisibleCenter] = useState(0);
+
+  // Compute active text (progressively loaded portion)
+  const activeText = useMemo(() => {
+    if (currentText.length <= READING_CHUNK_SIZE) return currentText;
+    return currentText.substring(0, loadedLength);
+  }, [currentText, loadedLength]);
+
+  // Initialize progressive loading when currentText changes
+  useEffect(() => {
+    fullTextRef.current = currentText;
+    const initialLen = currentText.length <= READING_CHUNK_SIZE
+      ? currentText.length
+      : alignToWordBoundary(currentText, READING_CHUNK_SIZE);
+    setLoadedLength(initialLen);
+  }, [currentText]);
+
   // Load dictionary on mount
   useEffect(() => {
     dictionaryService.load();
@@ -29,7 +67,13 @@ export default function Reading() {
 
   // Load initial text
   useEffect(() => {
-    loadNextText();
+    const state = location.state as { text?: string; title?: string } | null;
+    if (state?.text) {
+      setCurrentText(state.text);
+      window.history.replaceState({}, document.title);
+    } else {
+      loadNextText();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -38,120 +82,58 @@ export default function Reading() {
     setCurrentText(item.content);
     setTooltip(null);
     setHighlightedIndices(new Set());
+    setVisibleCenter(0);
+    // Reset scroll position
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
   };
 
-  // Group text into words
-  const wordGroups = useMemo(() => {
-    const groups: { word: string; startIndex: number; length: number }[] = [];
-    let i = 0;
-    while (i < currentText.length) {
-      if (/[a-zA-Z'-]/.test(currentText[i])) {
-        let j = i;
-        while (j < currentText.length && /[a-zA-Z'-]/.test(currentText[j])) {
-          j++;
-        }
-        groups.push({ word: currentText.slice(i, j), startIndex: i, length: j - i });
-        i = j;
-      } else {
-        groups.push({ word: currentText[i], startIndex: i, length: 1 });
-        i++;
-      }
+  // Scroll handler: estimate which character position is in the center of the viewport
+  // and trigger progressive loading when near bottom
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const scrollable = el.scrollHeight - el.clientHeight;
+    if (scrollable <= 0) {
+      setVisibleCenter(0);
+      return;
     }
-    return groups;
-  }, [currentText]);
+    const scrollRatio = el.scrollTop / scrollable;
+    const estimatedCharPos = Math.floor(scrollRatio * activeText.length);
+    setVisibleCenter(estimatedCharPos);
 
-  // Build only-word list for phrase lookup
-  const onlyWords = useMemo(() => {
-    return wordGroups
-      .map((g, idx) => ({ ...g, groupIndex: idx }))
-      .filter(g => /[a-zA-Z]/.test(g.word));
-  }, [wordGroups]);
-
-  // Pre-compute phrase marks and correlative map
-  const { phraseMarkedIndices, correlativeMap } = useMemo(() => {
-    const marked = new Set<number>();
-    const corrMap = new Map<number, { indices: number[]; translation: string; patternLabel: string }>();
-
-    if (!settings.phraseHighlight || !dictionaryService.isLoaded()) {
-      return { phraseMarkedIndices: marked, correlativeMap: corrMap };
+    // Progressive load: when near bottom, load more
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < READING_LOAD_THRESHOLD;
+    if (nearBottom && loadedLength < fullTextRef.current.length) {
+      const nextLen = alignToWordBoundary(
+        fullTextRef.current,
+        loadedLength + READING_CHUNK_SIZE
+      );
+      setLoadedLength(Math.min(nextLen, fullTextRef.current.length));
     }
+  }, [activeText.length, loadedLength]);
 
-    const wordStrings = onlyWords.map(w => w.word);
-
-    // Continuous phrase matching
-    let i = 0;
-    while (i < onlyWords.length) {
-      const result = dictionaryService.lookupPhrase(wordStrings, i);
-      if (result) {
-        for (let k = i; k < i + result.length; k++) {
-          marked.add(onlyWords[k].startIndex);
-        }
-        i += result.length;
-      } else {
-        i++;
-      }
-    }
-
-    // Correlative (non-continuous) phrase matching
-    const usedByCorrelative = new Set<number>();
-    for (let wi = 0; wi < onlyWords.length; wi++) {
-      if (usedByCorrelative.has(wi)) continue;
-      const result = dictionaryService.matchCorrelative(wordStrings, wi);
-      if (result) {
-        const startIndices = result.indices.map(idx => onlyWords[idx].startIndex);
-        for (const idx of result.indices) {
-          usedByCorrelative.add(idx);
-          marked.add(onlyWords[idx].startIndex);
-        }
-        for (const si of startIndices) {
-          corrMap.set(si, {
-            indices: startIndices,
-            translation: result.translation,
-            patternLabel: result.patternLabel,
-          });
-        }
-      }
-    }
-
-    return { phraseMarkedIndices: marked, correlativeMap: corrMap };
-  }, [onlyWords, settings.phraseHighlight]);
-
-  // Pre-compute word frequencies
-  const wordFrequencies = useMemo(() => {
-    const freqMap = new Map<number, FreqLevel>();
-    if (!dictionaryService.isLoaded()) return freqMap;
-    wordGroups.forEach((group) => {
-      if (/[a-zA-Z]/.test(group.word)) {
-        const freq = dictionaryService.getFrequency(group.word);
-        freqMap.set(group.startIndex, freq);
-      }
-    });
-    return freqMap;
-  }, [wordGroups, dictionaryService.isLoaded()]);
-
-  // Pre-compute annotations
-  const wordAnnotations = useMemo(() => {
-    const annotations = new Map<number, string>();
-    if (!dictionaryService.isLoaded()) return annotations;
-    wordGroups.forEach((group, idx) => {
-      if (!/[a-zA-Z]/.test(group.word)) return;
-      const freq = dictionaryService.getFrequency(group.word);
-      const shouldAnnotate =
-        (freq === 'h' && settings.freqAnnotation.h) ||
-        (freq === 'm' && settings.freqAnnotation.m) ||
-        (freq === 'l' && settings.freqAnnotation.l);
-      if (!shouldAnnotate) return;
-      const entry = dictionaryService.lookup(group.word);
-      if (entry && entry.t) {
-        // 去掉词性，只取第一个翻译
-        let line = entry.t.split('\n')[0].trim();
-        line = line.replace(/^[a-z]+\.\s*/i, '');
-        const first = line.split(/[,;，；、]/)[0].trim();
-        if (first) annotations.set(idx, first);
-      }
-    });
-    return annotations;
-  }, [wordGroups, settings.freqAnnotation, dictionaryService.isLoaded()]);
+  // Shared text rendering computations
+  const {
+    wordGroups,
+    onlyWords,
+    windowStartGroupIdx,
+    windowEndGroupIdx,
+    windowStartCharIdx,
+    windowEndCharIdx,
+    useWindowing,
+    phraseMarkedIndices,
+    correlativeMap,
+    wordFrequencies,
+    wordAnnotations,
+  } = useTextRendering({
+    text: activeText,
+    originalText: currentText,
+    visibleCenter,
+    renderWindow: VISIBLE_BUFFER,
+    settings,
+  });
 
   const handleWordClick = (e: React.MouseEvent<HTMLSpanElement>, word: string, groupStartIndex: number) => {
     e.preventDefault();
@@ -225,12 +207,25 @@ export default function Reading() {
   return (
     <div className="outline-none w-full h-full flex flex-col">
       {/* Text Display Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-8">
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto p-4 sm:p-8"
+        onScroll={handleScroll}
+      >
         <div
           className="font-mono leading-relaxed tracking-wide break-all max-w-4xl mx-auto"
           style={{ fontSize: `${settings.fontSize}px` }}
         >
-          {wordGroups.map((group, groupIdx) => {
+          {/* Part 1: Before window - plain text, default color */}
+          {useWindowing && windowStartCharIdx > 0 && (
+            <span className="text-gray-800 dark:text-gray-200">
+              {activeText.substring(0, windowStartCharIdx)}
+            </span>
+          )}
+
+          {/* Part 2: Active window - full per-word rendering with all features */}
+          {wordGroups.slice(windowStartGroupIdx, windowEndGroupIdx).map((group, relIdx) => {
+            const groupIdx = windowStartGroupIdx + relIdx;
             const isWord = /[a-zA-Z]/.test(group.word);
             const freq = isWord ? wordFrequencies.get(group.startIndex) : undefined;
             const isPhraseWord = phraseMarkedIndices.has(group.startIndex);
@@ -283,6 +278,19 @@ export default function Reading() {
               </span>
             );
           })}
+
+          {/* Part 3: After window - plain text, default color */}
+          {useWindowing && windowEndCharIdx < activeText.length && (
+            <span className="text-gray-800 dark:text-gray-200">
+              {activeText.substring(windowEndCharIdx)}
+            </span>
+          )}
+          {/* Loading indicator when more text is available */}
+          {loadedLength < fullTextRef.current.length && (
+            <div className="text-center py-4">
+              <span className="text-gray-300 dark:text-gray-600 text-sm select-none">...</span>
+            </div>
+          )}
         </div>
       </div>
 

@@ -1,3 +1,5 @@
+import type { FreqLevel } from '../types';
+
 interface DictEntry {
   p: string; // phonetic 音标
   t: string; // translation 中文释义
@@ -14,6 +16,47 @@ class DictionaryService {
   private dict: Record<string, DictEntry> | null = null;
   private loading: Promise<void> | null = null;
   private correlativePatterns: CorrelativePattern[] = [];
+  private lookupCache = new Map<string, DictEntry | null>();
+  private freqCache = new Map<string, FreqLevel>();
+  private static readonly MAX_CACHE_SIZE = 10000;
+
+  private static readonly SUFFIX_RULES: [RegExp, string][] = [
+    [/ing$/, ''],
+    [/ing$/, 'e'],
+    [/ed$/, ''],
+    [/ed$/, 'e'],
+    [/s$/, ''],
+    [/es$/, ''],
+    [/ies$/, 'y'],
+    [/ly$/, ''],
+    [/tion$/, 'te'],
+    [/ment$/, ''],
+    [/ness$/, ''],
+    [/er$/, ''],
+    [/est$/, ''],
+  ];
+
+  private normalize(word: string): string {
+    return word.toLowerCase().replace(/[^a-z'-]/g, '');
+  }
+
+  private stem(word: string): string[] {
+    const stems: string[] = [];
+    for (const [suffix, replacement] of DictionaryService.SUFFIX_RULES) {
+      const s = word.replace(suffix, replacement);
+      if (s !== word && s.length > 2) {
+        stems.push(s);
+      }
+    }
+    return stems;
+  }
+
+  private cacheSet<T>(cache: Map<string, T>, key: string, value: T): void {
+    if (cache.size >= DictionaryService.MAX_CACHE_SIZE) {
+      cache.clear();
+    }
+    cache.set(key, value);
+  }
 
   async load(): Promise<void> {
     if (this.dict) return;
@@ -39,30 +82,27 @@ class DictionaryService {
 
   lookup(word: string): DictEntry | null {
     if (!this.dict) return null;
-    // 先查原词（小写）
-    const lower = word.toLowerCase().replace(/[^a-z'-]/g, '');
-    if (this.dict[lower]) return this.dict[lower];
-    // 简单词形还原：去掉常见后缀尝试查找
-    const stems = [
-      lower.replace(/ing$/, ''),
-      lower.replace(/ing$/, 'e'),
-      lower.replace(/ed$/, ''),
-      lower.replace(/ed$/, 'e'),
-      lower.replace(/s$/, ''),
-      lower.replace(/es$/, ''),
-      lower.replace(/ies$/, 'y'),
-      lower.replace(/ly$/, ''),
-      lower.replace(/tion$/, 'te'),
-      lower.replace(/ment$/, ''),
-      lower.replace(/ness$/, ''),
-      lower.replace(/er$/, ''),
-      lower.replace(/est$/, ''),
-    ];
-    for (const stem of stems) {
-      if (stem !== lower && stem.length > 2 && this.dict[stem]) {
-        return this.dict[stem];
+    const lower = this.normalize(word);
+    if (!lower) return null;
+
+    // 查询缓存
+    if (this.lookupCache.has(lower)) return this.lookupCache.get(lower)!;
+
+    // 直接查找
+    if (this.dict[lower]) {
+      this.cacheSet(this.lookupCache, lower, this.dict[lower]);
+      return this.dict[lower];
+    }
+
+    // 词形还原后查找
+    for (const s of this.stem(lower)) {
+      if (this.dict[s]) {
+        this.cacheSet(this.lookupCache, lower, this.dict[s]);
+        return this.dict[s];
       }
     }
+
+    this.cacheSet(this.lookupCache, lower, null);
     return null;
   }
 
@@ -79,15 +119,16 @@ class DictionaryService {
   }
 
   // 匹配关联词组（非连续词组）
-  matchCorrelative(words: string[], startIndex: number): {
+  // originalText 和 wordPositions 用于句子边界检查，防止跨句匹配
+  matchCorrelative(words: string[], startIndex: number, originalText?: string, wordPositions?: number[]): {
     indices: number[];
     translation: string;
     patternLabel: string;
   } | null {
-    const lowerWords = words.map(w => w.toLowerCase().replace(/[^a-z'-]/g, ''));
+    const lowerWords = words.map(w => this.normalize(w));
 
     for (const cp of this.correlativePatterns) {
-      const result = this.tryMatchPattern(lowerWords, startIndex, cp);
+      const result = this.tryMatchPattern(lowerWords, startIndex, cp, originalText, wordPositions);
       if (result) return result;
     }
     return null;
@@ -96,7 +137,9 @@ class DictionaryService {
   private tryMatchPattern(
     words: string[],
     startIndex: number,
-    cp: CorrelativePattern
+    cp: CorrelativePattern,
+    originalText?: string,
+    wordPositions?: number[]
   ): { indices: number[]; translation: string; patternLabel: string } | null {
     if (startIndex >= words.length) return null;
     if (words[startIndex] !== cp.pattern[0]) return null;
@@ -114,6 +157,17 @@ class DictionaryService {
 
         let found = false;
         for (let gap = 1; gap <= cp.maxGap && wordIdx + gap < words.length; gap++) {
+          // 检查句子边界：如果原文中两个词之间存在句子终止符，则停止搜索
+          if (originalText && wordPositions) {
+            const fromPos = wordPositions[wordIdx];
+            const toPos = wordPositions[wordIdx + gap];
+            if (fromPos !== undefined && toPos !== undefined) {
+              const textBetween = originalText.slice(fromPos, toPos);
+              if (/[.?!]/.test(textBetween)) {
+                break; // 遇到句子边界，停止搜索
+              }
+            }
+          }
           if (words[wordIdx + gap] === nextPatToken) {
             wordIdx = wordIdx + gap;
             found = true;
@@ -142,19 +196,19 @@ class DictionaryService {
     return this.correlativePatterns;
   }
 
-  getFrequency(word: string): 'h' | 'm' | 'l' | 'u' {
+  getFrequency(word: string): FreqLevel {
     if (!this.dict) return 'u';
-    const lower = word.toLowerCase().replace(/[^a-z'-]/g, '');
+    const lower = this.normalize(word);
     if (!lower) return 'u';
 
-    const entry = this.dict[lower];
-    if (entry && entry.f) return entry.f;
+    // 查询频率缓存
+    const cached = this.freqCache.get(lower);
+    if (cached !== undefined) return cached;
 
-    // 尝试词形还原后查找
-    const looked = this.lookup(lower);
-    if (looked && looked.f) return looked.f;
-
-    return 'u'; // 不在词典中 = 超低频
+    const entry = this.lookup(lower);
+    const freq: FreqLevel = entry?.f ?? 'u';
+    this.cacheSet(this.freqCache, lower, freq);
+    return freq;
   }
 
   isLoaded(): boolean {

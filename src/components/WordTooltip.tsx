@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface WordTooltipProps {
   word: string;
@@ -8,7 +8,7 @@ interface WordTooltipProps {
   onClose: () => void;
 }
 
-export default function WordTooltip({ word, phonetic, translation, position, onClose }: WordTooltipProps) {
+const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translation, position, onClose }: WordTooltipProps) {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [placement, setPlacement] = useState<'above' | 'below'>('above');
   const [coords, setCoords] = useState({ left: 0, top: 0 });
@@ -106,4 +106,16 @@ export default function WordTooltip({ word, phonetic, translation, position, onC
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  return prevProps.word === nextProps.word &&
+    prevProps.phonetic === nextProps.phonetic &&
+    prevProps.translation === nextProps.translation &&
+    prevProps.position.x === nextProps.position.x &&
+    prevProps.position.y === nextProps.position.y &&
+    prevProps.position.width === nextProps.position.width &&
+    prevProps.position.top === nextProps.position.top &&
+    prevProps.onClose === nextProps.onClose;
+});
+
+WordTooltip.displayName = 'WordTooltip';
+export default WordTooltip;

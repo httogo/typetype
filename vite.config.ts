@@ -40,6 +40,122 @@ function apiMiddleware() {
   };
 }
 
+const DEV_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+async function devExtractGutenberg(id: string) {
+  const txtUrl = `https://www.gutenberg.org/ebooks/${id}.txt.utf-8`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  const response = await fetch(txtUrl, {
+    headers: { 'User-Agent': DEV_UA },
+    signal: controller.signal,
+  });
+  clearTimeout(timeout);
+
+  if (!response.ok) throw new Error(`无法下载 Gutenberg 书籍 (HTTP ${response.status})`);
+
+  let text = await response.text();
+
+  // 清理 header
+  const startMark = text.indexOf('*** START OF');
+  if (startMark !== -1) {
+    const afterStart = text.indexOf('\n', startMark);
+    text = text.substring(afterStart + 1);
+  }
+
+  // 清理 footer
+  const endMark = text.indexOf('*** END OF');
+  if (endMark !== -1) {
+    text = text.substring(0, endMark);
+  }
+
+  text = text.replace(/\n{3,}/g, '\n\n').trim();
+  const firstLine = text.split('\n').find(l => l.trim().length > 0) || 'Gutenberg Book';
+
+  return {
+    title: firstLine.substring(0, 100),
+    content: text,
+    length: text.length,
+  };
+}
+
+async function devExtractStandardEbooks(author: string, book: string) {
+  const txtUrl = `https://standardebooks.org/ebooks/${author}/${book}/downloads/${book}.txt`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  const response = await fetch(txtUrl, {
+    headers: { 'User-Agent': DEV_UA },
+    signal: controller.signal,
+  });
+  clearTimeout(timeout);
+
+  if (!response.ok) throw new Error(`无法下载 Standard Ebooks 书籍 (HTTP ${response.status})`);
+
+  let text = await response.text();
+  text = text.replace(/\n{3,}/g, '\n\n').trim();
+
+  const title = book.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+  return {
+    title,
+    content: text,
+    length: text.length,
+  };
+}
+
+async function devExtractContent(url: string) {
+  // 1. Project Gutenberg
+  const gutenbergMatch = url.match(/gutenberg\.org\/ebooks\/(\d+)/);
+  if (gutenbergMatch) {
+    return await devExtractGutenberg(gutenbergMatch[1]);
+  }
+
+  // 2. Standard Ebooks
+  const seMatch = url.match(/standardebooks\.org\/ebooks\/([^/]+)\/([^/]+)/);
+  if (seMatch) {
+    return await devExtractStandardEbooks(seMatch[1], seMatch[2]);
+  }
+
+  // 3. 其他网站：使用 Readability 通用提取
+  const { JSDOM } = await import('jsdom');
+  const { Readability } = await import('@mozilla/readability');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': DEV_UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.5',
+    },
+    signal: controller.signal,
+  });
+  clearTimeout(timeout);
+
+  if (!response.ok) throw new Error(`无法访问该网页 (HTTP ${response.status})`);
+
+  const html = await response.text();
+  const dom = new JSDOM(html, { url });
+  const reader = new Readability(dom.window.document);
+  const article = reader.parse();
+
+  if (!article || !article.textContent) {
+    throw new Error('无法提取网页正文内容');
+  }
+
+  const cleanText = article.textContent
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+
+  return {
+    title: article.title || '',
+    content: cleanText,
+    length: cleanText.length,
+  };
+}
+
 async function handleExtract(chunks: Buffer[], res: any) {
   const body = Buffer.concat(chunks).toString('utf-8');
 
@@ -59,60 +175,39 @@ async function handleExtract(chunks: Buffer[], res: any) {
     return;
   }
 
+  // 验证 URL 格式和协议
+  let parsedUrl: URL;
   try {
-    new URL(url);
+    parsedUrl = new URL(url);
   } catch {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'URL 格式不正确' }));
     return;
   }
 
+  // 仅允许 http/https 协议，防止 SSRF
+  if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: '仅支持 http 和 https 协议' }));
+    return;
+  }
+
+  // URL 长度限制
+  if (url.length > 2048) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'URL 过长' }));
+    return;
+  }
+
   try {
-    // 动态导入（避免生产构建时包含这些依赖）
-    const { JSDOM } = await import('jsdom');
-    const { Readability } = await import('@mozilla/readability');
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: `无法访问该网页 (HTTP ${response.status})` }));
-      return;
+    const result = await devExtractContent(url);
+    // 响应内容大小限制（5MB）
+    if (result.content.length > 5 * 1024 * 1024) {
+      result.content = result.content.substring(0, 5 * 1024 * 1024);
+      result.length = result.content.length;
     }
-
-    const html = await response.text();
-    const dom = new JSDOM(html, { url });
-    const reader = new Readability(dom.window.document);
-    const article = reader.parse();
-
-    if (!article || !article.textContent) {
-      res.writeHead(400, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: '无法提取网页正文内容' }));
-      return;
-    }
-
-    const cleanText = article.textContent
-      .replace(/\n{3,}/g, '\n\n')
-      .replace(/[ \t]+/g, ' ')
-      .trim();
-
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      title: article.title || '',
-      content: cleanText,
-      length: cleanText.length,
-    }));
+    res.end(JSON.stringify(result));
   } catch (error: any) {
     const message = error.name === 'AbortError'
       ? '请求超时，请检查网址是否可访问'

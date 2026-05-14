@@ -4,8 +4,8 @@ import Layout from './components/Layout';
 import Practice from './pages/Practice';
 import Reading from './pages/Reading';
 import Custom from './pages/Custom';
+import Articles from './pages/Articles';
 import History from './pages/History';
-import SettingsPage from './pages/Settings';
 
 function App() {
   return (
@@ -16,8 +16,8 @@ function App() {
             <Route index element={<Practice />} />
             <Route path="reading" element={<Reading />} />
             <Route path="custom" element={<Custom />} />
+            <Route path="articles" element={<Articles />} />
             <Route path="history" element={<History />} />
-            <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

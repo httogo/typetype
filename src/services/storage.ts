@@ -1,9 +1,11 @@
-import type { TypingResult, Settings, TextItem } from '../types';
+import type { TypingResult, Settings, TextItem, SavedArticle } from '../types';
+import { parseChapters } from '../utils/chapterParser';
 
 const HISTORY_KEY = 'typetype_history';
 const SETTINGS_KEY = 'typetype_settings';
 const ERROR_STATS_KEY = 'typetype_error_stats';
 const CUSTOM_TEXTS_KEY = 'typetype_custom_texts';
+const ARTICLES_KEY = 'typetype_articles';
 
 const DEFAULT_SETTINGS: Settings = {
   fontSize: 20,
@@ -42,6 +44,30 @@ export const storageService = {
       localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     } catch {
       console.error('Failed to save typing result');
+    }
+  },
+
+  /** 原子操作：同时保存打字结果和错误统计，防止数据不一致 */
+  saveTypingResult(result: TypingResult, errorMap: Record<string, { errors: number; total: number }>): void {
+    try {
+      // 读取当前数据
+      const history = this.getHistory();
+      const errorStats = this.getErrorStats();
+
+      // 更新数据
+      history.push(result);
+      Object.keys(errorMap).forEach(key => {
+        errorStats[key] = {
+          errors: (errorStats[key]?.errors ?? 0) + errorMap[key].errors,
+          total: (errorStats[key]?.total ?? 0) + errorMap[key].total,
+        };
+      });
+
+      // 一次性写入
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      localStorage.setItem(ERROR_STATS_KEY, JSON.stringify(errorStats));
+    } catch (e) {
+      console.error('Failed to save typing result:', e);
     }
   },
 
@@ -141,6 +167,70 @@ export const storageService = {
       localStorage.setItem(CUSTOM_TEXTS_KEY, JSON.stringify(merged));
     } catch {
       console.error('Failed to add custom texts');
+    }
+  },
+
+  // ---- 我的文章 ----
+
+  getSavedArticles(): SavedArticle[] {
+    try {
+      const raw = localStorage.getItem(ARTICLES_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveArticle(article: Omit<SavedArticle, 'id' | 'createdAt'>): SavedArticle {
+    const chapters = article.chapters ?? parseChapters(article.content);
+    const newArticle: SavedArticle = {
+      ...article,
+      id: `article-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: Date.now(),
+      chapters: chapters.length > 0 ? chapters : undefined,
+    };
+    try {
+      const articles = this.getSavedArticles();
+      articles.unshift(newArticle);
+      localStorage.setItem(ARTICLES_KEY, JSON.stringify(articles));
+    } catch (e) {
+      console.error('Failed to save article:', e);
+      throw new Error('存储空间不足，无法保存文章');
+    }
+    return newArticle;
+  },
+
+  updateArticle(id: string, updates: Partial<SavedArticle>): void {
+    try {
+      const articles = this.getSavedArticles();
+      const idx = articles.findIndex((a) => a.id === id);
+      if (idx !== -1) {
+        articles[idx] = { ...articles[idx], ...updates };
+        localStorage.setItem(ARTICLES_KEY, JSON.stringify(articles));
+      }
+    } catch (e) {
+      console.error('Failed to update article:', e);
+      throw new Error('存储空间不足，无法更新文章');
+    }
+  },
+
+  deleteArticle(id: string): void {
+    try {
+      const articles = this.getSavedArticles().filter((a) => a.id !== id);
+      localStorage.setItem(ARTICLES_KEY, JSON.stringify(articles));
+    } catch (e) {
+      console.error('Failed to delete article:', e);
+      throw new Error('存储操作失败，无法删除文章');
+    }
+  },
+
+  clearAllArticles(): void {
+    try {
+      localStorage.removeItem(ARTICLES_KEY);
+    } catch {
+      console.error('Failed to clear articles');
     }
   },
 };

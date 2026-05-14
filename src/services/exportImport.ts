@@ -1,5 +1,15 @@
-import type { TypingResult, TextItem } from '../types';
+import type { TypingResult, TextItem, SavedArticle, Settings } from '../types';
 import { storageService } from './storage';
+
+interface ExportData {
+  version: number;
+  exportedAt: string;
+  data: {
+    articles: SavedArticle[];
+    history: TypingResult[];
+    settings: Settings;
+  };
+}
 
 export const exportImportService = {
   // === 历史记录导出 ===
@@ -86,5 +96,62 @@ export const exportImportService = {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  // === 全量数据导出 ===
+
+  exportAllData(): void {
+    const exportData: ExportData = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      data: {
+        articles: storageService.getSavedArticles(),
+        history: storageService.getHistory(),
+        settings: storageService.getSettings(),
+      },
+    };
+    const content = JSON.stringify(exportData, null, 2);
+    this.downloadFile(content, `typetype-backup-${Date.now()}.json`, 'application/json');
+  },
+
+  // === 全量数据导入 ===
+
+  importAllData(jsonString: string): { success: boolean; error?: string } {
+    try {
+      const parsed = JSON.parse(jsonString);
+      if (!parsed.version || !parsed.data) {
+        throw new Error('无效的备份文件格式');
+      }
+      const { articles, history, settings } = parsed.data;
+
+      // 导入文章
+      if (Array.isArray(articles) && articles.length > 0) {
+        const existing = storageService.getSavedArticles();
+        const existingIds = new Set(existing.map((a: SavedArticle) => a.id));
+        const newArticles = articles.filter((a: SavedArticle) => !existingIds.has(a.id));
+        const merged = [...newArticles, ...existing];
+        localStorage.setItem('typetype_articles', JSON.stringify(merged));
+      }
+
+      // 导入历史记录
+      if (Array.isArray(history) && history.length > 0) {
+        const existing = storageService.getHistory();
+        const existingIds = new Set(existing.map((r: TypingResult) => r.id));
+        const newRecords = history.filter((r: TypingResult) => !existingIds.has(r.id));
+        const merged = [...existing, ...newRecords];
+        localStorage.setItem('typetype_history', JSON.stringify(merged));
+      }
+
+      // 导入设置
+      if (settings && typeof settings === 'object') {
+        const currentSettings = storageService.getSettings();
+        const mergedSettings = { ...currentSettings, ...settings } as Settings;
+        localStorage.setItem('typetype_settings', JSON.stringify(mergedSettings));
+      }
+
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
   },
 };

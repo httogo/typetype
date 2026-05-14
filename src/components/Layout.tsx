@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
+import { exportImportService } from '../services/exportImport';
 import type { TimedDuration } from '../types';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -11,6 +12,7 @@ const navItems = [
   { to: '/', label: '练习', end: true },
   { to: '/reading', label: '阅读' },
   { to: '/custom', label: '导入文章' },
+  { to: '/articles', label: '我的文章' },
   { to: '/history', label: '历史记录' },
 ];
 
@@ -21,6 +23,35 @@ export default function Layout() {
   const { settings, updateSettings } = useSettings();
   const location = useLocation();
   const isReadingPage = location.pathname === '/reading';
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleExportAll = () => {
+    exportImportService.exportAllData();
+    showToast('数据已导出');
+  };
+
+  const handleImportAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = exportImportService.importAllData(reader.result as string);
+      if (result.success) {
+        showToast('数据已成功导入，即将刷新页面');
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        showToast(`导入失败：${result.error}`);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   // Apply dark mode class on document root
   useEffect(() => {
@@ -143,7 +174,7 @@ export default function Layout() {
                 </button>
                 {/* Settings popover */}
                 {settingsOpen && (
-                  <div className="animate-fade-in absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-gray-700 p-4 z-50 divide-y divide-gray-100 dark:divide-gray-700">
+                  <div className="animate-fade-in absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-gray-700 p-4 z-50 divide-y divide-gray-100 dark:divide-gray-700 overflow-y-auto max-h-[80vh]">
                     {/* Difficulty */}
                     <div className="pb-4">
                       <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">难度</label>
@@ -324,6 +355,32 @@ export default function Layout() {
                       </div>
                     </div>
                     )}
+
+                    {/* 数据管理 */}
+                    <div className="pt-4">
+                      <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">数据管理</label>
+                      <div className="flex gap-2 mt-1.5">
+                        <button
+                          onClick={handleExportAll}
+                          className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
+                        >
+                          导出数据
+                        </button>
+                        <button
+                          onClick={() => importInputRef.current?.click()}
+                          className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
+                        >
+                          导入数据
+                        </button>
+                        <input
+                          type="file"
+                          ref={importInputRef}
+                          className="hidden"
+                          accept=".json"
+                          onChange={handleImportAll}
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -372,6 +429,13 @@ export default function Layout() {
           </div>
         )}
       </nav>
+
+      {/* Toast 提示 */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 text-sm font-medium rounded-lg shadow-lg animate-[fadeIn_0.2s_ease-out]">
+          {toast}
+        </div>
+      )}
 
       {/* 主内容区域 - 占满剩余空间 */}
       <main className="flex-1 flex flex-col min-h-0">
