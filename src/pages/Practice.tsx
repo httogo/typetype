@@ -15,6 +15,7 @@ import {
   RENDER_WINDOW,
   PRACTICE_LOAD_THRESHOLD,
 } from '../hooks/usePracticeState';
+import type { WordList, HighlightStyle } from '../types';
 
 export default function Practice() {
   const { settings } = useSettings();
@@ -50,9 +51,23 @@ export default function Practice() {
   // Phrase highlight state
   const [highlightedIndices, setHighlightedIndices] = useState<Set<number>>(new Set());
 
+  // Word list highlight state
+  const [wordLists, setWordLists] = useState<WordList[]>(() => storageService.getWordLists());
+  const [highlightStyles, setHighlightStyles] = useState<HighlightStyle[]>(() => storageService.getHighlightStyles());
+
   // Load dictionary on mount
   useEffect(() => {
     dictionaryService.load();
+  }, []);
+
+  // Listen for wordlists-updated event
+  useEffect(() => {
+    const handler = () => {
+      setWordLists(storageService.getWordLists());
+      setHighlightStyles(storageService.getHighlightStyles());
+    };
+    window.addEventListener('wordlists-updated', handler);
+    return () => window.removeEventListener('wordlists-updated', handler);
   }, []);
 
   const {
@@ -245,12 +260,15 @@ export default function Practice() {
     correlativeMap,
     wordFrequencies,
     wordAnnotations,
+    customHighlightMap,
   } = useTextRendering({
     text: activeText,
     originalText: currentText,
     currentIndex: effectiveCenter,
     renderWindow: RENDER_WINDOW,
     settings,
+    wordLists,
+    highlightStyles,
   });
 
   // Map cache: O(1) lookup for word index by startIndex
@@ -389,6 +407,7 @@ export default function Practice() {
             highlightedIndices={highlightedIndices}
             wordFrequencies={wordFrequencies}
             wordAnnotations={wordAnnotations}
+            customHighlightMap={customHighlightMap}
             loadedLength={loadedLength}
             fullTextLength={fullTextRef.current.length}
             onTextAreaClick={handleTextAreaClick}

@@ -23,3 +23,10 @@ npm-debug.log*
 
 # PWA dev
 dev-dist/
+
+# Playwright
+test-results/
+playwright-report/
+
+# Superpowers visual brainstorming
+.superpowers/

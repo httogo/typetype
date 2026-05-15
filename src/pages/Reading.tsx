@@ -3,8 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useTextRendering } from '../hooks/useTextRendering';
 import { dictionaryService } from '../services/dictionary';
+import { storageService } from '../services/storage';
+import { highlightConfigToCss } from '../services/customization';
 import { getRandomText } from '../utils/textSelection';
 import WordTooltip from '../components/WordTooltip';
+import type { WordList, HighlightStyle } from '../types';
 
 const VISIBLE_BUFFER = 3000;
 const READING_CHUNK_SIZE = 8000;
@@ -41,6 +44,10 @@ export default function Reading() {
   // Phrase highlight state
   const [highlightedIndices, setHighlightedIndices] = useState<Set<number>>(new Set());
 
+  // Word list highlight state
+  const [wordLists, setWordLists] = useState<WordList[]>(() => storageService.getWordLists());
+  const [highlightStyles, setHighlightStyles] = useState<HighlightStyle[]>(() => storageService.getHighlightStyles());
+
   // Scroll-based windowing state
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [visibleCenter, setVisibleCenter] = useState(0);
@@ -63,6 +70,16 @@ export default function Reading() {
   // Load dictionary on mount
   useEffect(() => {
     dictionaryService.load();
+  }, []);
+
+  // Listen for wordlists-updated event
+  useEffect(() => {
+    const handler = () => {
+      setWordLists(storageService.getWordLists());
+      setHighlightStyles(storageService.getHighlightStyles());
+    };
+    window.addEventListener('wordlists-updated', handler);
+    return () => window.removeEventListener('wordlists-updated', handler);
   }, []);
 
   // Load initial text
@@ -131,12 +148,15 @@ export default function Reading() {
     correlativeMap,
     wordFrequencies,
     wordAnnotations,
+    customHighlightMap,
   } = useTextRendering({
     text: activeText,
     originalText: currentText,
     visibleCenter,
     renderWindow: VISIBLE_BUFFER,
     settings,
+    wordLists,
+    highlightStyles,
   });
 
   // Map cache: O(1) lookup for word index by startIndex
@@ -267,6 +287,16 @@ export default function Reading() {
 
             if (isWord) {
               const isHighlighted = highlightedIndices.has(group.startIndex);
+
+              // Apply custom highlight style for words
+              let customStyle: React.CSSProperties | undefined;
+              if (customHighlightMap) {
+                const highlight = customHighlightMap.get(group.startIndex);
+                if (highlight) {
+                  customStyle = highlightConfigToCss(highlight.style) as React.CSSProperties;
+                }
+              }
+
               return (
                 <Fragment key={`w-${group.startIndex}`}>
                   <span
@@ -275,6 +305,7 @@ export default function Reading() {
                     }${
                       isPhraseWord && !isHighlighted ? ' underline decoration-dashed decoration-gray-400 dark:decoration-gray-500 underline-offset-4' : ''
                     }`}
+                    style={customStyle}
                     onClick={(e) => handleWordClick(e, group.word, group.startIndex)}
                   >
                     {group.word}

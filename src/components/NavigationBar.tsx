@@ -7,6 +7,7 @@ const navItems = [
   { to: '/custom', label: '导入文章' },
   { to: '/articles', label: '我的文章' },
   { to: '/history', label: '历史记录' },
+  { to: '/vocabulary', label: '词表' },
 ];
 
 interface NavigationBarProps {

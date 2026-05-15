@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { storageService } from '../services/storage';
+import type { WordListTerm } from '../types';
 
 interface WordTooltipProps {
   word: string;
@@ -13,6 +15,36 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
   const [placement, setPlacement] = useState<'above' | 'below'>('above');
   const [coords, setCoords] = useState({ left: 0, top: 0 });
   const [visible, setVisible] = useState(false);
+  const [addedToList, setAddedToList] = useState(false);
+
+  const wordLists = storageService.getWordLists();
+  const hasWordLists = wordLists.length > 0;
+
+  const handleAddToWordList = () => {
+    const lists = storageService.getWordLists();
+    if (lists.length === 0) return;
+
+    const targetList = lists[0];
+    const normalizedWord = word.toLowerCase().trim();
+
+    // Avoid duplicates
+    if (targetList.terms.some(t => t.value === normalizedWord)) {
+      setAddedToList(true);
+      return;
+    }
+
+    const term: WordListTerm = {
+      id: `term-${Date.now()}`,
+      value: normalizedWord,
+      createdAt: Date.now(),
+    };
+
+    targetList.terms.push(term);
+    targetList.updatedAt = Date.now();
+    storageService.saveWordLists(lists);
+    window.dispatchEvent(new CustomEvent('wordlists-updated'));
+    setAddedToList(true);
+  };
 
   useEffect(() => {
     if (!tooltipRef.current) return;
@@ -102,6 +134,19 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
             <div className="text-xs text-gray-400 dark:text-gray-500 mb-1 font-mono">{phonetic}</div>
           )}
           <div className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{translation}</div>
+          {hasWordLists && (
+            <button
+              onClick={handleAddToWordList}
+              disabled={addedToList}
+              className={`text-xs mt-1 ${
+                addedToList
+                  ? 'text-gray-400 dark:text-gray-500 cursor-default'
+                  : 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300'
+              }`}
+            >
+              {addedToList ? '✓ 已加入' : '+ 加入词表'}
+            </button>
+          )}
         </div>
       </div>
     </div>

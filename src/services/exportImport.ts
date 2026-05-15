@@ -1,5 +1,8 @@
-import type { TypingResult, TextItem, SavedArticle, Settings } from '../types';
+import type { TypingResult, TextItem, SavedArticle, Settings, HighlightStyle, WordList } from '../types';
 import { storageService } from './storage';
+
+const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+type ImportDifficulty = typeof DIFFICULTIES[number];
 
 interface ExportData {
   version: number;
@@ -8,7 +11,37 @@ interface ExportData {
     articles: SavedArticle[];
     history: TypingResult[];
     settings: Settings;
+    highlightStyles: HighlightStyle[];
+    wordLists: WordList[];
   };
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isTypingResult(value: unknown): value is TypingResult {
+  return isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.timestamp === 'number' &&
+    typeof value.wpm === 'number' &&
+    typeof value.accuracy === 'number';
+}
+
+function isImportText(value: unknown): value is { id?: string; content: string; difficulty?: unknown; title?: string } {
+  return isRecord(value) &&
+    typeof value.content === 'string' &&
+    value.content.trim().length > 0;
+}
+
+function toDifficulty(value: unknown): ImportDifficulty {
+  return typeof value === 'string' && (DIFFICULTIES as readonly string[]).includes(value)
+    ? value as ImportDifficulty
+    : 'medium';
 }
 
 export const exportImportService = {
@@ -44,17 +77,15 @@ export const exportImportService = {
       const data = JSON.parse(jsonString);
       if (!Array.isArray(data)) throw new Error('数据格式错误：需要数组');
       // 验证每条记录的基本字段
-      const validRecords = data.filter((r: any) =>
-        r.id && r.timestamp && typeof r.wpm === 'number' && typeof r.accuracy === 'number'
-      );
+      const validRecords = data.filter(isTypingResult);
       // 合并到现有历史（去重）
       const existing = storageService.getHistory();
       const existingIds = new Set(existing.map(r => r.id));
       const newRecords = validRecords.filter((r: TypingResult) => !existingIds.has(r.id));
       newRecords.forEach((r: TypingResult) => storageService.saveResult(r));
       return { success: true, count: newRecords.length };
-    } catch (e: any) {
-      return { success: false, count: 0, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, count: 0, error: errorMessage(e) };
     }
   },
 
@@ -70,17 +101,15 @@ export const exportImportService = {
     try {
       const data = JSON.parse(jsonString);
       if (!Array.isArray(data)) throw new Error('数据格式错误：需要数组');
-      const validTexts = data.filter((t: any) =>
-        t.content && typeof t.content === 'string' && t.content.trim().length > 0
-      ).map((t: any, i: number) => ({
+      const validTexts = data.filter(isImportText).map((t, i: number) => ({
         id: t.id || `imported-${Date.now()}-${i}`,
         content: t.content.trim(),
-        difficulty: (['easy', 'medium', 'hard'] as const).includes(t.difficulty) ? t.difficulty : 'medium',
+        difficulty: toDifficulty(t.difficulty),
         title: t.title || `导入文本 ${i + 1}`,
       }));
       return { success: true, texts: validTexts };
-    } catch (e: any) {
-      return { success: false, texts: [], error: e.message };
+    } catch (e: unknown) {
+      return { success: false, texts: [], error: errorMessage(e) };
     }
   },
 
@@ -108,6 +137,8 @@ export const exportImportService = {
         articles: storageService.getSavedArticles(),
         history: storageService.getHistory(),
         settings: storageService.getSettings(),
+        highlightStyles: storageService.getHighlightStyles(),
+        wordLists: storageService.getWordLists(),
       },
     };
     const content = JSON.stringify(exportData, null, 2);
@@ -119,10 +150,16 @@ export const exportImportService = {
   importAllData(jsonString: string): { success: boolean; error?: string } {
     try {
       const parsed = JSON.parse(jsonString);
+      if (!isRecord(parsed)) {
+        throw new Error('无效的备份文件格式');
+      }
       if (!parsed.version || !parsed.data) {
         throw new Error('无效的备份文件格式');
       }
-      const { articles, history, settings } = parsed.data;
+      if (!isRecord(parsed.data)) {
+        throw new Error('无效的备份文件格式');
+      }
+      const { articles, history, settings, highlightStyles, wordLists } = parsed.data;
 
       // 导入文章
       if (Array.isArray(articles) && articles.length > 0) {
@@ -143,15 +180,35 @@ export const exportImportService = {
       }
 
       // 导入设置
-      if (settings && typeof settings === 'object') {
+      if (isRecord(settings)) {
         const currentSettings = storageService.getSettings();
-        const mergedSettings = { ...currentSettings, ...settings } as Settings;
+        const mergedSettings = {
+          ...currentSettings,
+          ...settings,
+          typography: { ...currentSettings.typography, ...(isRecord(settings.typography) ? settings.typography : {}) },
+        } as Settings;
         localStorage.setItem('typetype_settings', JSON.stringify(mergedSettings));
       }
 
+      // 导入高亮样式
+      if (Array.isArray(highlightStyles) && highlightStyles.length > 0) {
+        const existing = storageService.getHighlightStyles();
+        const existingIds = new Set(existing.map((s: HighlightStyle) => s.id));
+        const newStyles = highlightStyles.filter((s: HighlightStyle) => s.id && !existingIds.has(s.id));
+        storageService.saveHighlightStyles([...existing, ...newStyles]);
+      }
+
+      // 导入词表
+      if (Array.isArray(wordLists) && wordLists.length > 0) {
+        const existing = storageService.getWordLists();
+        const existingIds = new Set(existing.map((l: WordList) => l.id));
+        const newLists = wordLists.filter((l: WordList) => l.id && !existingIds.has(l.id));
+        storageService.saveWordLists([...existing, ...newLists]);
+      }
+
       return { success: true };
-    } catch (e: any) {
-      return { success: false, error: e.message };
+    } catch (e: unknown) {
+      return { success: false, error: errorMessage(e) };
     }
   },
 };

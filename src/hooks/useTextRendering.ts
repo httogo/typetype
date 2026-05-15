@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { dictionaryService } from '../services/dictionary';
-import type { Settings, FreqLevel } from '../types';
+import { buildCustomHighlightMap } from '../services/customization';
+import type { Settings, FreqLevel, WordList, HighlightStyle, ResolvedWordHighlight } from '../types';
 
 export interface WordGroup {
   word: string;
@@ -19,6 +20,8 @@ export interface UseTextRenderingOptions {
   visibleCenter?: number;    // Reading uses this as center
   renderWindow?: number;     // window size (default 1500)
   settings: Settings;
+  wordLists?: WordList[];
+  highlightStyles?: HighlightStyle[];
 }
 
 export interface CorrelativeInfo {
@@ -39,6 +42,7 @@ export interface UseTextRenderingResult {
   correlativeMap: Map<number, CorrelativeInfo>;
   wordFrequencies: Map<number, FreqLevel>;
   wordAnnotations: Map<number, string>;
+  customHighlightMap: Map<number, ResolvedWordHighlight> | null;
 }
 
 /** Binary search: find the first group that overlaps with targetPos (startIndex + length > targetPos) */
@@ -87,7 +91,7 @@ function binarySearchEnd(groups: WordGroup[], targetPos: number): number {
  * @param options.settings - User settings for frequency highlighting, annotations, etc.
  */
 export function useTextRendering(options: UseTextRenderingOptions): UseTextRenderingResult {
-  const { text, originalText, currentIndex, visibleCenter, renderWindow = 1500, settings } = options;
+  const { text, originalText, currentIndex, visibleCenter, renderWindow = 1500, settings, wordLists, highlightStyles } = options;
 
   // The center position for windowing: currentIndex (Practice) or visibleCenter (Reading)
   const centerPosition = currentIndex ?? visibleCenter ?? 0;
@@ -109,6 +113,7 @@ export function useTextRendering(options: UseTextRenderingOptions): UseTextRende
     correlativeMap: new Map<number, CorrelativeInfo>(),
     wordFrequencies: new Map<number, FreqLevel>(),
     wordAnnotations: new Map<number, string>(),
+    customHighlightMap: null,
   }), []);
 
   const isEmpty = !text;
@@ -297,6 +302,20 @@ export function useTextRendering(options: UseTextRenderingOptions): UseTextRende
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wordGroups, useWindowing, windowStartGroupIdx, windowEndGroupIdx, dictionaryService.isLoaded()]);
 
+  // Pre-compute custom highlight map
+  const customHighlightMap = useMemo(() => {
+    if (!wordLists?.length || !highlightStyles?.length) return null;
+    if (settings.customHighlightsEnabled === false) return null;
+
+    const enabledLists = wordLists
+      .filter(l => l.enabled)
+      .sort((a, b) => a.priority - b.priority);
+
+    if (!enabledLists.length) return null;
+
+    return buildCustomHighlightMap(text, enabledLists, highlightStyles);
+  }, [text, wordLists, highlightStyles, settings.customHighlightsEnabled]);
+
   // Pre-compute word annotations (windowed)
   const wordAnnotations = useMemo(() => {
     const annotations = new Map<number, string>();
@@ -338,5 +357,6 @@ export function useTextRendering(options: UseTextRenderingOptions): UseTextRende
     correlativeMap,
     wordFrequencies,
     wordAnnotations,
+    customHighlightMap,
   };
 }

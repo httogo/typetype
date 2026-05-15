@@ -7,6 +7,7 @@ import Reading from './pages/Reading';
 import Custom from './pages/Custom';
 import Articles from './pages/Articles';
 import History from './pages/History';
+import Vocabulary from './pages/Vocabulary';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
               <Route path="custom" element={<Custom />} />
               <Route path="articles" element={<Articles />} />
               <Route path="history" element={<History />} />
+              <Route path="vocabulary" element={<Vocabulary />} />
             </Route>
           </Routes>
         </ErrorBoundary>

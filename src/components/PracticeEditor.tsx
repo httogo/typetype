@@ -1,6 +1,7 @@
 import { useMemo, Fragment } from 'react';
-import type { CharState, FreqLevel, Settings } from '../types';
+import type { CharState, FreqLevel, Settings, ResolvedWordHighlight } from '../types';
 import type { WordGroup } from '../hooks/useTextRendering';
+import { highlightConfigToCss } from '../services/customization';
 
 export interface PracticeEditorProps {
   wordGroups: WordGroup[];
@@ -17,6 +18,7 @@ export interface PracticeEditorProps {
   highlightedIndices: Set<number>;
   wordFrequencies: Map<number, FreqLevel>;
   wordAnnotations: Map<number, string>;
+  customHighlightMap?: Map<number, ResolvedWordHighlight> | null;
   loadedLength: number;
   fullTextLength: number;
   onTextAreaClick: (e: React.MouseEvent<HTMLDivElement>) => void;
@@ -44,6 +46,7 @@ export function PracticeEditor({
   highlightedIndices,
   wordFrequencies,
   wordAnnotations,
+  customHighlightMap,
   loadedLength,
   fullTextLength,
   onTextAreaClick,
@@ -93,6 +96,16 @@ export function PracticeEditor({
               return 'char-transition text-gray-400 dark:text-gray-500 cursor-text';
           }
         })();
+
+        // Apply custom highlight style for pending chars only
+        let extraStyle: React.CSSProperties | undefined;
+        if (charState.status === 'pending' && customHighlightMap) {
+          const highlight = customHighlightMap.get(idx);
+          if (highlight) {
+            extraStyle = highlightConfigToCss(highlight.style) as React.CSSProperties;
+          }
+        }
+
         return (
           <span
             key={idx}
@@ -100,6 +113,7 @@ export function PracticeEditor({
             data-char-idx={idx}
             data-char={charState.char}
             className={className}
+            style={extraStyle}
           >
             {charState.char === ' ' ? '\u00A0' : charState.char}
           </span>
@@ -139,7 +153,7 @@ export function PracticeEditor({
 
       return <span key={`s-${group.startIndex}`} className="cursor-text">{renderedChars}</span>;
     });
-  }, [wordGroups, windowStartGroupIdx, windowEndGroupIdx, chars, currentIndex, settings.freqHighlight, phraseMarkedIndices, highlightedIndices, wordFrequencies, wordAnnotations]);
+  }, [wordGroups, windowStartGroupIdx, windowEndGroupIdx, chars, currentIndex, settings.freqHighlight, phraseMarkedIndices, highlightedIndices, wordFrequencies, wordAnnotations, customHighlightMap]);
 
   return (
     <div className="flex-1 flex flex-col relative min-h-0">

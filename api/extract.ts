@@ -116,6 +116,41 @@ async function extractContent(url: string) {
   return await extractWithReadability(url);
 }
 
+/* ── URL 校验（纯函数，供测试 & handler 共用） ── */
+
+const PRIVATE_RANGES = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+];
+
+export function validateExtractUrl(raw: string): { ok: true } | { ok: false; error: string } {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return { ok: false, error: 'URL 格式不正确' };
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { ok: false, error: '仅支持 http 和 https 协议' };
+  }
+
+  const host = parsed.hostname.replace(/^\[|\]$/g, '');
+
+  if (host === '::1' || host === 'localhost' || host.endsWith('.localhost')) {
+    return { ok: false, error: '不允许访问本地地址' };
+  }
+
+  if (PRIVATE_RANGES.some(re => re.test(host))) {
+    return { ok: false, error: '不允许访问内网地址' };
+  }
+
+  return { ok: true };
+}
+
 export default async function handler(req: any, res: any) {
   // 只允许 POST 请求
   if (req.method !== 'POST') {

@@ -43,6 +43,8 @@ export interface Settings extends DisplaySettings, AudioSettings, FrequencySetti
   mode: PracticeMode;
   timedDuration: TimedDuration;
   phraseHighlight: boolean; // 是否高亮显示词组
+  customHighlightsEnabled?: boolean;
+  typography?: TypographySettings;
 }
 
 export type FreqLevel = 'h' | 'm' | 'l' | 'u';
@@ -89,4 +91,66 @@ export interface ExtractResponse {
   title: string;
   content: string;
   length: number;
+}
+
+// ===== 词表与高亮样式 =====
+
+/** 高亮样式配置 */
+export interface HighlightStyleConfig {
+  textColor?: string;
+  backgroundColor?: string;
+  fontFamily?: 'serif' | 'sans' | 'mono';
+  fontWeight?: '700';
+  fontStyle?: 'italic';
+  underline?: boolean;
+  underlineColor?: string;
+  strikethrough?: boolean;
+  strikethroughColor?: string;
+  borderColor?: string;
+  borderRadius?: number;
+}
+
+/** 高亮样式对象（含元数据） */
+export interface HighlightStyle {
+  id: string;
+  name: string;
+  config: HighlightStyleConfig;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** 词表项 */
+export interface WordListTerm {
+  id: string;
+  value: string;
+  createdAt: number;
+}
+
+/** 词表对象 */
+export interface WordList {
+  id: string;
+  name: string;
+  styleId: string;
+  terms: WordListTerm[];
+  enabled: boolean;
+  priority: number;
+  matchForms: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** 解析后的高亮结果 */
+export interface ResolvedWordHighlight {
+  style: HighlightStyleConfig;
+  matchedTerms: string[];
+  listIds: string[];
+}
+
+/** 排版设置 */
+export interface TypographySettings {
+  fontFamily?: string;
+  lineHeight?: number;
+  letterSpacing?: number;
+  wordSpacing?: number;
+  maxContentWidth?: number;
 }

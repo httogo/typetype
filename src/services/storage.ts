@@ -1,4 +1,4 @@
-import type { TypingResult, Settings, TextItem, SavedArticle } from '../types';
+import type { TypingResult, Settings, TextItem, SavedArticle, HighlightStyle, WordList } from '../types';
 import { parseChapters } from '../utils/chapterParser';
 import { logger } from './logger';
 
@@ -7,6 +7,29 @@ const SETTINGS_KEY = 'typetype_settings';
 const ERROR_STATS_KEY = 'typetype_error_stats';
 const CUSTOM_TEXTS_KEY = 'typetype_custom_texts';
 const ARTICLES_KEY = 'typetype_articles';
+const HIGHLIGHT_STYLES_KEY = 'typetype_highlight_styles';
+const WORD_LISTS_KEY = 'typetype_word_lists';
+
+const DEFAULT_HIGHLIGHT_STYLES: HighlightStyle[] = [
+  {
+    id: 'style-emphasis',
+    name: '重点词',
+    config: { textColor: '#b91c1c', backgroundColor: '#fef3c7', fontWeight: '700', underline: true, underlineColor: '#b91c1c' },
+    createdAt: 0, updatedAt: 0,
+  },
+  {
+    id: 'style-new',
+    name: '新词',
+    config: { textColor: '#1e40af', backgroundColor: '#dbeafe' },
+    createdAt: 0, updatedAt: 0,
+  },
+  {
+    id: 'style-learned',
+    name: '已掌握',
+    config: { textColor: '#6b7280', strikethrough: true },
+    createdAt: 0, updatedAt: 0,
+  },
+];
 
 const DEFAULT_SETTINGS: Settings = {
   fontSize: 20,
@@ -237,5 +260,60 @@ export const storageService = {
     } catch {
       logger.error('storage.clearAllArticles');
     }
+  },
+
+  // ---- 高亮样式 ----
+
+  getHighlightStyles(): HighlightStyle[] {
+    try {
+      const raw = localStorage.getItem(HIGHLIGHT_STYLES_KEY);
+      if (!raw) return [...DEFAULT_HIGHLIGHT_STYLES];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [...DEFAULT_HIGHLIGHT_STYLES];
+    } catch {
+      return [...DEFAULT_HIGHLIGHT_STYLES];
+    }
+  },
+
+  saveHighlightStyles(styles: HighlightStyle[]): void {
+    try {
+      localStorage.setItem(HIGHLIGHT_STYLES_KEY, JSON.stringify(styles));
+    } catch (e) {
+      logger.error('storage', 'Failed to save highlight styles');
+    }
+  },
+
+  // ---- 词表 ----
+
+  getWordLists(): WordList[] {
+    try {
+      const raw = localStorage.getItem(WORD_LISTS_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveWordLists(lists: WordList[]): void {
+    try {
+      localStorage.setItem(WORD_LISTS_KEY, JSON.stringify(lists));
+    } catch (e) {
+      logger.error('storage', 'Failed to save word lists');
+    }
+  },
+
+  saveWordList(input: Omit<WordList, 'id' | 'createdAt' | 'updatedAt'>): WordList {
+    const list: WordList = {
+      ...input,
+      id: `list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    const lists = this.getWordLists();
+    lists.push(list);
+    this.saveWordLists(lists);
+    return list;
   },
 };
