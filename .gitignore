@@ -30,3 +30,6 @@ playwright-report/
 
 # Superpowers visual brainstorming
 .superpowers/
+
+# Qoder IDE plans
+.qoder/

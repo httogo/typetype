@@ -174,7 +174,10 @@ export function buildCustomHighlightMap(
         }
         if (!matched) continue;
         for (let j = 0; j < termWords.length; j++) {
-          addMatch(matches, tokens[i + j].startIndex, style.config, normalizedTerm, list.id);
+          const token = tokens[i + j];
+          for (let k = token.startIndex; k < token.startIndex + token.word.length; k++) {
+            addMatch(matches, k, style.config, normalizedTerm, list.id);
+          }
         }
       }
     }

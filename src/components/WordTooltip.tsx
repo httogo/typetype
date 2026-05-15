@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { storageService } from '../services/storage';
 import type { WordListTerm } from '../types';
 
@@ -16,9 +16,18 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
   const [coords, setCoords] = useState({ left: 0, top: 0 });
   const [visible, setVisible] = useState(false);
   const [addedToList, setAddedToList] = useState(false);
+  const [showListPicker, setShowListPicker] = useState(false);
 
   const wordLists = storageService.getWordLists();
   const hasWordLists = wordLists.length > 0;
+
+  // Check if the word is already in any word list
+  const isInWordList = useMemo(() => {
+    const normalizedWord = word.toLowerCase().trim();
+    return wordLists.some(list =>
+      list.terms.some(term => term.value === normalizedWord)
+    );
+  }, [word, wordLists]);
 
   const handleAddToWordList = () => {
     const lists = storageService.getWordLists();
@@ -44,6 +53,64 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
     storageService.saveWordLists(lists);
     window.dispatchEvent(new CustomEvent('wordlists-updated'));
     setAddedToList(true);
+  };
+
+  const handleAddToSpecificList = (listId: string) => {
+    const lists = storageService.getWordLists();
+    const targetList = lists.find(l => l.id === listId);
+    if (!targetList) return;
+
+    const normalizedWord = word.toLowerCase().trim();
+    if (targetList.terms.some(t => t.value === normalizedWord)) {
+      setShowListPicker(false);
+      setAddedToList(true);
+      return;
+    }
+
+    const term: WordListTerm = {
+      id: `term-${Date.now()}`,
+      value: normalizedWord,
+      createdAt: Date.now(),
+    };
+
+    targetList.terms.push(term);
+    targetList.updatedAt = Date.now();
+    storageService.saveWordLists(lists);
+    window.dispatchEvent(new CustomEvent('wordlists-updated'));
+    setShowListPicker(false);
+    setAddedToList(true);
+  };
+
+  const getContainingListName = () => {
+    const normalizedWord = word.toLowerCase();
+    for (const list of wordLists) {
+      if (list.terms.some(t => t.value === normalizedWord)) {
+        return list.name;
+      }
+    }
+    return '词表';
+  };
+
+  const handleRemoveFromWordList = () => {
+    const lists = storageService.getWordLists();
+    const normalizedWord = word.toLowerCase().trim();
+
+    let removed = false;
+    for (const list of lists) {
+      const idx = list.terms.findIndex(t => t.value === normalizedWord);
+      if (idx !== -1) {
+        list.terms.splice(idx, 1);
+        list.updatedAt = Date.now();
+        removed = true;
+        break;
+      }
+    }
+
+    if (removed) {
+      storageService.saveWordLists(lists);
+      window.dispatchEvent(new CustomEvent('wordlists-updated'));
+      setAddedToList(false);
+    }
   };
 
   useEffect(() => {
@@ -82,17 +149,26 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
     requestAnimationFrame(() => setVisible(true));
   }, [position]);
 
+  // Reset list picker when tooltip is hidden
+  useEffect(() => {
+    if (!visible) setShowListPicker(false);
+  }, [visible]);
+
   // Close on Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        if (showListPicker) {
+          setShowListPicker(false);
+          return;
+        }
         e.stopPropagation();
         onClose();
       }
     };
     window.addEventListener('keydown', handleKey, true);
     return () => window.removeEventListener('keydown', handleKey, true);
-  }, [onClose]);
+  }, [onClose, showListPicker]);
 
   // Close on click outside
   useEffect(() => {
@@ -129,24 +205,57 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
 
         {/* Content */}
         <div className="relative">
-          <div className="font-medium text-sm text-gray-800 dark:text-gray-100 mb-1">{word}</div>
-          {phonetic && (
-            <div className="text-xs text-gray-400 dark:text-gray-500 mb-1 font-mono">{phonetic}</div>
-          )}
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="font-medium text-sm text-gray-800 dark:text-gray-100 mb-1">{word}</div>
+              {phonetic && (
+                <div className="text-xs text-gray-400 dark:text-gray-500 mb-1 font-mono">{phonetic}</div>
+              )}
+            </div>
+            {hasWordLists && (
+              <div className="relative ml-2">
+                {isInWordList || addedToList ? (
+                  <button
+                    onClick={handleRemoveFromWordList}
+                    className="ml-2 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    title={`从「${getContainingListName()}」中移除`}
+                  >
+                    −
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleAddToWordList}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      if (wordLists.length > 1) {
+                        setShowListPicker(true);
+                      }
+                    }}
+                    className="ml-2 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    title={wordLists.length > 1 
+                      ? `左键添加到「${wordLists[0]?.name}」\n右键选择其他词表` 
+                      : `添加到「${wordLists[0]?.name}」`}
+                  >
+                    +
+                  </button>
+                )}
+                {showListPicker && (
+                  <div className="absolute right-0 top-full mt-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200 dark:border-gray-600 rounded-md shadow-lg py-1 min-w-[100px] z-50">
+                    {wordLists.map(list => (
+                      <button
+                        key={list.id}
+                        onClick={() => handleAddToSpecificList(list.id)}
+                        className="block w-full text-left px-3 py-1 text-xs text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+                      >
+                        {list.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">{translation}</div>
-          {hasWordLists && (
-            <button
-              onClick={handleAddToWordList}
-              disabled={addedToList}
-              className={`text-xs mt-1 ${
-                addedToList
-                  ? 'text-gray-400 dark:text-gray-500 cursor-default'
-                  : 'text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300'
-              }`}
-            >
-              {addedToList ? '✓ 已加入' : '+ 加入词表'}
-            </button>
-          )}
         </div>
       </div>
     </div>
