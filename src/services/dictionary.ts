@@ -16,6 +16,8 @@ interface CorrelativePattern {
 class DictionaryService {
   private dict: Record<string, DictEntry> | null = null;
   private loading: Promise<void> | null = null;
+  private fullLoadPromise: Promise<void> | null = null;
+  private isFullLoaded = false;
   private correlativePatterns: CorrelativePattern[] = [];
   private lookupCache = new Map<string, DictEntry | null>();
   private freqCache = new Map<string, FreqLevel>();
@@ -63,22 +65,79 @@ class DictionaryService {
     if (this.dict) return;
     if (this.loading) return this.loading;
 
-    this.loading = fetch('/dict.json')
-      .then(res => res.json())
-      .then(data => {
-        // 提取关联词组模式
+    // 两阶段加载：先加载常用词典（小体积，快速可用），再后台加载完整词典
+    this.loading = this.loadCommonDict();
+    return this.loading;
+  }
+
+  private async loadCommonDict(): Promise<void> {
+    try {
+      const res = await fetch('/dict-common.json');
+      if (res.ok) {
+        const data = await res.json();
         if (data && data['__correlative__']) {
           this.correlativePatterns = data['__correlative__'] as CorrelativePattern[];
           delete data['__correlative__'];
         }
         this.dict = data;
-      })
-      .catch(err => {
-        logger.error('dictionary.load', err);
-        this.dict = {};
-      });
+      } else {
+        // 降级：直接加载完整词典
+        await this.loadFullDictDirect();
+        return;
+      }
+    } catch {
+      // 降级：直接加载完整词典
+      await this.loadFullDictDirect();
+      return;
+    }
 
-    return this.loading;
+    // 阶段2：后台加载完整词典
+    this.fullLoadPromise = this.loadFullDict();
+  }
+
+  private async loadFullDict(): Promise<void> {
+    try {
+      const res = await fetch('/dict.json');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data['__correlative__']) {
+          this.correlativePatterns = data['__correlative__'] as CorrelativePattern[];
+          delete data['__correlative__'];
+        }
+        this.dict = data;
+        this.isFullLoaded = true;
+        // 清除缓存，让后续查询使用完整词典
+        this.lookupCache.clear();
+        this.freqCache.clear();
+      }
+    } catch (err) {
+      logger.warn('dictionary', 'Full dictionary load failed, using common dict');
+    }
+  }
+
+  private async loadFullDictDirect(): Promise<void> {
+    try {
+      const res = await fetch('/dict.json');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data['__correlative__']) {
+          this.correlativePatterns = data['__correlative__'] as CorrelativePattern[];
+          delete data['__correlative__'];
+        }
+        this.dict = data;
+        this.isFullLoaded = true;
+      } else {
+        this.dict = {};
+      }
+    } catch (err) {
+      logger.error('dictionary.load', err);
+      this.dict = {};
+    }
+  }
+
+  /** 等待完整词典加载完成（用于需要完整数据的场景） */
+  async waitForFull(): Promise<void> {
+    if (this.fullLoadPromise) await this.fullLoadPromise;
   }
 
   /**
@@ -260,6 +319,10 @@ class DictionaryService {
 
   isLoaded(): boolean {
     return this.dict !== null;
+  }
+
+  isFullDictLoaded(): boolean {
+    return this.isFullLoaded;
   }
 }
 

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { exportImportService } from '../services/exportImport';
 import type { Settings, TimedDuration } from '../types';
 
@@ -14,7 +15,8 @@ interface SettingsPanelProps {
   onUpdateSettings: (patch: Partial<Settings>) => void;
 }
 
-export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: SettingsPanelProps) {
+export default function SettingsPanel({ isOpen, onClose, settings, onUpdateSettings }: SettingsPanelProps) {
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const isReadingPage = location.pathname === '/reading';
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -27,7 +29,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
 
   const handleExportAll = () => {
     exportImportService.exportAllData();
-    showToast('数据已导出');
+    showToast(t('settings.exported'));
   };
 
   const handleImportAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,10 +39,10 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
     reader.onload = () => {
       const result = exportImportService.importAllData(reader.result as string);
       if (result.success) {
-        showToast('数据已成功导入，即将刷新页面');
+        showToast(t('settings.importSuccess'));
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        showToast(`导入失败：${result.error}`);
+        showToast(t('settings.importFail', { error: result.error }));
       }
     };
     reader.readAsText(file);
@@ -50,10 +52,23 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
   return (
     <>
       {isOpen && (
-        <div className="animate-fade-in absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-gray-700 p-4 z-50 divide-y divide-gray-100 dark:divide-gray-700 overflow-y-auto max-h-[80vh]">
+        <aside role="complementary" aria-label={t('settings.title')} className="animate-fade-in fixed inset-0 z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 bg-white dark:bg-gray-800 sm:rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 border border-gray-200 dark:border-gray-700 p-4 sm:z-50 divide-y divide-gray-100 dark:divide-gray-700 overflow-y-auto sm:max-h-[80vh]">
+          {/* 移动端关闭按钮 */}
+          <div className="sm:hidden flex items-center justify-between pb-3 mb-3 border-b border-gray-100 dark:border-gray-700">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t('settings.title')}</span>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              aria-label={t('settings.close')}
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
           {/* Difficulty */}
-          <div className="pb-4">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">难度</label>
+          <fieldset className="pb-4">
+            <legend className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.difficulty')}</legend>
             <div className="flex gap-1 mt-1.5">
               {(['easy', 'medium', 'hard'] as Difficulty[]).map((diff) => (
                 <button
@@ -65,15 +80,15 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
-                  {diff === 'easy' ? '简单' : diff === 'medium' ? '中等' : '困难'}
+                  {diff === 'easy' ? t('settings.easy') : diff === 'medium' ? t('settings.medium') : t('settings.hard')}
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           {/* Mode */}
-          <div className="py-4">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">模式</label>
+          <fieldset className="py-4">
+            <legend className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.mode')}</legend>
             <div className="flex flex-wrap gap-1 mt-1.5">
               <button
                 onClick={() => onUpdateSettings({ mode: 'full' })}
@@ -83,7 +98,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
               >
-                全文
+                {t('settings.fullText')}
               </button>
               {TIMED_OPTIONS.map((d) => (
                 <button
@@ -99,12 +114,12 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
                 </button>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           {/* Font size */}
           <div className="py-4">
             <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-              字体大小: {settings.fontSize}px
+              {t('settings.fontSize')}: {settings.fontSize}px
             </label>
             <input
               type="range"
@@ -118,7 +133,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
 
           {/* Show stats toggle */}
           <div className="py-4 flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">显示统计</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.showStats')}</label>
             <button
               onClick={() => onUpdateSettings({ showLiveStats: !settings.showLiveStats })}
               className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${settings.showLiveStats ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
@@ -131,7 +146,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
 
           {/* Phrase highlight toggle */}
           <div className="py-4 flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">词组提示</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.phraseHighlight')}</label>
             <button
               onClick={() => onUpdateSettings({ phraseHighlight: !settings.phraseHighlight })}
               className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${settings.phraseHighlight ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
@@ -145,7 +160,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
           {/* Sound toggle */}
           <div className="py-4">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">按键音效</label>
+              <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.sound')}</label>
               <button
                 onClick={() => onUpdateSettings({ soundEnabled: !settings.soundEnabled })}
                 className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${settings.soundEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`}
@@ -157,7 +172,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
             </div>
             {settings.soundEnabled && (
               <div className="mt-2">
-                <label className="text-xs text-gray-400 dark:text-gray-500">音量: {Math.round(settings.soundVolume * 100)}%</label>
+                <label className="text-xs text-gray-400 dark:text-gray-500">{t('settings.volume')}: {Math.round(settings.soundVolume * 100)}%</label>
                 <input
                   type="range"
                   min={0}
@@ -172,9 +187,9 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
 
           {/* 词频设置 */}
           <div className="py-4">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">词频着色</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.freqColor')}</label>
             <div className="flex gap-3 mt-1.5">
-              {([['h', '高频'], ['m', '中频'], ['l', '低频']] as ['h' | 'm' | 'l', string][]).map(([key, label]) => (
+              {([['h', t('settings.high')], ['m', t('settings.mid')], ['l', t('settings.low')]] as ['h' | 'm' | 'l', string][]).map(([key, label]) => (
                 <label key={key} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
@@ -189,9 +204,9 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
           </div>
 
           <div className="py-4">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">显示释义</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.freqAnnotation')}</label>
             <div className="flex gap-3 mt-1.5">
-              {([['h', '高频'], ['m', '中频'], ['l', '低频']] as ['h' | 'm' | 'l', string][]).map(([key, label]) => (
+              {([['h', t('settings.high')], ['m', t('settings.mid')], ['l', t('settings.low')]] as ['h' | 'm' | 'l', string][]).map(([key, label]) => (
                 <label key={key} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
@@ -208,7 +223,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
           {/* 阅读设置 - 仅在阅读页面显示 */}
           {isReadingPage && (
           <div className="pt-4">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">阅读设置</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.readingSettings')}</label>
             <div className="flex flex-col gap-1.5 mt-2">
               <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
                 <input
@@ -217,7 +232,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
                   onChange={() => onUpdateSettings({ freqDimLow: !settings.freqDimLow })}
                   className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
                 />
-                淡化低频词
+                {t('settings.dimLow')}
               </label>
               <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
                 <input
@@ -226,27 +241,54 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
                   onChange={() => onUpdateSettings({ freqDimUltraLow: !settings.freqDimUltraLow })}
                   className="w-3.5 h-3.5 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500"
                 />
-                淡化超低频词
+                {t('settings.dimUltraLow')}
               </label>
             </div>
           </div>
           )}
 
+          {/* 语言切换 */}
+          <div className="pt-4">
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.language')}</label>
+            <div className="flex gap-1 mt-1.5">
+              <button
+                onClick={() => i18n.changeLanguage('zh')}
+                className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
+                  i18n.language?.startsWith('zh')
+                    ? 'bg-indigo-600 text-white ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-800'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                中文
+              </button>
+              <button
+                onClick={() => i18n.changeLanguage('en')}
+                className={`flex-1 px-2 py-1.5 text-xs font-medium rounded-lg transition-all duration-200 ${
+                  i18n.language?.startsWith('en')
+                    ? 'bg-indigo-600 text-white ring-2 ring-offset-1 ring-indigo-500 dark:ring-offset-gray-800'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                English
+              </button>
+            </div>
+          </div>
+
           {/* 数据管理 */}
           <div className="pt-4">
-            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">数据管理</label>
+            <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('settings.dataManagement')}</label>
             <div className="flex gap-2 mt-1.5">
               <button
                 onClick={handleExportAll}
                 className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
               >
-                导出数据
+                {t('settings.export')}
               </button>
               <button
                 onClick={() => importInputRef.current?.click()}
                 className="flex-1 px-2 py-1.5 text-xs font-medium rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200"
               >
-                导入数据
+                {t('settings.import')}
               </button>
               <input
                 type="file"
@@ -257,7 +299,7 @@ export default function SettingsPanel({ isOpen, settings, onUpdateSettings }: Se
               />
             </div>
           </div>
-        </div>
+        </aside>
       )}
 
       {/* Toast 提示 */}

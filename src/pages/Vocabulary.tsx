@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createHighlightStyle, createWordListTerm } from '../services/customization';
 import { storageService } from '../services/storage';
 import type { HighlightStyle, HighlightStyleConfig, WordList, WordListTerm } from '../types';
@@ -35,6 +36,7 @@ function updateConfig(style: HighlightStyle, patch: Partial<HighlightStyleConfig
 }
 
 export default function Vocabulary() {
+  const { t } = useTranslation();
   const [lists, setLists] = useState<WordList[]>(() => storageService.getWordLists());
   const [styles, setStyles] = useState<HighlightStyle[]>(() => storageService.getHighlightStyles());
   const [selectedListId, setSelectedListId] = useState<string | null>(() => lists[0]?.id ?? null);
@@ -71,7 +73,7 @@ export default function Vocabulary() {
   const createList = () => {
     const defaultStyleId = styles.find(style => style.id === DEFAULT_STYLE_ID)?.id ?? styles[0]?.id ?? DEFAULT_STYLE_ID;
     const list = storageService.saveWordList({
-      name: `新词表 ${lists.length + 1}`,
+      name: t('vocabulary.newListName', { n: lists.length + 1 }),
       styleId: defaultStyleId,
       enabled: true,
       priority: lists.length,
@@ -81,7 +83,7 @@ export default function Vocabulary() {
     const next = [...lists, list];
     setLists(next);
     setSelectedListId(list.id);
-    showToast('词表已创建');
+    showToast(t('vocabulary.listCreated'));
   };
 
   const updateList = (id: string, patch: Partial<WordList>) => {
@@ -95,11 +97,11 @@ export default function Vocabulary() {
   };
 
   const deleteList = (id: string) => {
-    if (!window.confirm('确定要删除这个词表吗？')) return;
+    if (!window.confirm(t('vocabulary.confirmDeleteList'))) return;
     const next = lists.filter(list => list.id !== id);
     persistLists(next);
     setSelectedListId(next[0]?.id ?? null);
-    showToast('词表已删除');
+    showToast(t('vocabulary.listDeleted'));
   };
 
   const moveList = (id: string, direction: -1 | 1) => {
@@ -114,7 +116,7 @@ export default function Vocabulary() {
   const createStyle = () => {
     const style = createHighlightStyle({
       id: `style-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name: `样式 ${styles.length + 1}`,
+      name: `${t('vocabulary.styleName')} ${styles.length + 1}`,
       config: {
         textColor: '#4f46e5',
         backgroundColor: '#eef2ff',
@@ -123,7 +125,7 @@ export default function Vocabulary() {
     });
     persistStyles([...styles, style]);
     setSelectedStyleId(style.id);
-    showToast('样式已创建');
+    showToast(t('vocabulary.styleCreated'));
   };
 
   const updateStyle = (style: HighlightStyle) => {
@@ -131,34 +133,34 @@ export default function Vocabulary() {
   };
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6">
+    <div className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-6">
       <div className="max-w-6xl mx-auto grid lg:grid-cols-[1.05fr_0.95fr] gap-5">
         <section className="min-w-0">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">词表</h1>
+              <h1 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{t('vocabulary.title')}</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                启用多个词表时，列表越靠上优先级越高。
+                {t('vocabulary.priorityHint')}
               </p>
             </div>
             <button
               onClick={createList}
               className="px-3 py-2 text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
             >
-              新建词表
+                            {t('vocabulary.newList')}
             </button>
           </div>
 
-          <div className="grid md:grid-cols-[0.95fr_1.05fr] gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-[0.95fr_1.05fr] gap-4">
             <div className="space-y-2">
               {lists.length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-8 text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">还没有自定义词表</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('vocabulary.empty')}</p>
                   <button
                     onClick={createList}
                     className="mt-3 px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 rounded-lg"
                   >
-                    创建第一个词表
+                    {t('vocabulary.createFirst')}
                   </button>
                 </div>
               ) : lists.map((list, index) => {
@@ -176,11 +178,11 @@ export default function Vocabulary() {
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">{list.name}</span>
                       <span className={`text-[11px] px-1.5 py-0.5 rounded ${list.enabled ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}`}>
-                        {list.enabled ? '启用' : '停用'}
+                        {list.enabled ? t('vocabulary.enabled') : t('vocabulary.disabled')}
                       </span>
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-                      <span>{list.terms.length} 个条目 · {style?.name ?? '未指定样式'}</span>
+                      <span>{t('vocabulary.termsCount', { count: list.terms.length })} · {style?.name ?? t('vocabulary.noStyle')}</span>
                       <span>#{index + 1}</span>
                     </div>
                   </button>
@@ -192,7 +194,7 @@ export default function Vocabulary() {
               {selectedList ? (
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">词表名称</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('vocabulary.listName')}</label>
                     <input
                       aria-label="词表名称"
                       value={selectedList.name}
@@ -206,18 +208,18 @@ export default function Vocabulary() {
                       onClick={() => updateList(selectedList.id, { enabled: !selectedList.enabled })}
                       className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${selectedList.enabled ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                     >
-                      {selectedList.enabled ? '已启用' : '已停用'}
+                      {selectedList.enabled ? t('vocabulary.isEnabled') : t('vocabulary.isDisabled')}
                     </button>
                     <button
                       onClick={() => updateList(selectedList.id, { matchForms: !selectedList.matchForms })}
                       className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${selectedList.matchForms ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}
                     >
-                      {selectedList.matchForms ? '匹配词形' : '精确匹配'}
+                      {selectedList.matchForms ? t('vocabulary.matchForms') : t('vocabulary.exactMatch')}
                     </button>
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">应用样式</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('vocabulary.applyStyle')}</label>
                     <select
                       value={selectedList.styleId}
                       onChange={(e) => updateList(selectedList.id, { styleId: e.target.value })}
@@ -230,26 +232,26 @@ export default function Vocabulary() {
                   </div>
 
                   <div className="flex gap-2">
-                    <button onClick={() => moveList(selectedList.id, -1)} className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">上移</button>
-                    <button onClick={() => moveList(selectedList.id, 1)} className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">下移</button>
-                    <button onClick={() => deleteList(selectedList.id)} className="flex-1 px-3 py-2 text-sm rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400">删除</button>
+                    <button onClick={() => moveList(selectedList.id, -1)} className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">{t('vocabulary.moveUp')}</button>
+                    <button onClick={() => moveList(selectedList.id, 1)} className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">{t('vocabulary.moveDown')}</button>
+                    <button onClick={() => deleteList(selectedList.id)} className="flex-1 px-3 py-2 text-sm rounded-lg border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400">{t('vocabulary.delete')}</button>
                   </div>
 
                   <div>
-                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">词表条目</label>
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('vocabulary.terms')}</label>
                     <textarea
-                      aria-label="词表条目"
+                      aria-label={t('vocabulary.terms')}
                       value={selectedTermText}
                       onChange={(e) => updateTerms(selectedList, e.target.value)}
-                      placeholder={"每行一个单词或短语\nanalysis\nin terms of"}
+                      placeholder={t('vocabulary.termsPlaceholder')}
                       className="mt-1.5 h-48 w-full resize-none px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">支持单词和固定短语；短语按连续词匹配。</p>
+                    <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{t('vocabulary.termsHint')}</p>
                   </div>
                 </div>
               ) : (
                 <div className="h-full flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
-                  选择或创建一个词表
+                  {t('vocabulary.selectOrCreate')}
                 </div>
               )}
             </div>
@@ -259,14 +261,14 @@ export default function Vocabulary() {
         <section className="min-w-0">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">样式模板</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">词表引用模板，模板可复用。</p>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{t('vocabulary.styleTemplates')}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('vocabulary.styleHint')}</p>
             </div>
             <button
               onClick={createStyle}
               className="px-3 py-2 text-sm font-medium border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 rounded-lg transition-colors hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
             >
-              新建样式
+                            {t('vocabulary.newStyle')}
             </button>
           </div>
 
@@ -290,7 +292,7 @@ export default function Vocabulary() {
             {selectedStyle && (
               <div className="space-y-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">样式名称</label>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('vocabulary.styleName')}</label>
                   <input
                     aria-label="样式名称"
                     value={selectedStyle.name}
@@ -301,7 +303,7 @@ export default function Vocabulary() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <label className="text-xs text-gray-500 dark:text-gray-400">
-                    文字颜色
+                    {t('vocabulary.textColor')}
                     <input
                       type="color"
                       value={selectedStyle.config.textColor ?? '#111827'}
@@ -310,7 +312,7 @@ export default function Vocabulary() {
                     />
                   </label>
                   <label className="text-xs text-gray-500 dark:text-gray-400">
-                    背景色
+                    {t('vocabulary.bgColor')}
                     <input
                       type="color"
                       value={selectedStyle.config.backgroundColor ?? '#ffffff'}
@@ -325,30 +327,30 @@ export default function Vocabulary() {
                     onClick={() => updateStyle(updateConfig(selectedStyle, { fontWeight: selectedStyle.config.fontWeight === '700' ? undefined : '700' }))}
                     className={`px-3 py-2 text-sm font-bold rounded-lg border ${selectedStyle.config.fontWeight === '700' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'}`}
                   >
-                    粗体
+                    {t('vocabulary.bold')}
                   </button>
                   <button
                     onClick={() => updateStyle(updateConfig(selectedStyle, { fontStyle: selectedStyle.config.fontStyle === 'italic' ? undefined : 'italic' }))}
                     className={`px-3 py-2 text-sm italic rounded-lg border ${selectedStyle.config.fontStyle === 'italic' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'}`}
                   >
-                    斜体
+                    {t('vocabulary.italic')}
                   </button>
                   <button
                     onClick={() => updateStyle(updateConfig(selectedStyle, { underline: !selectedStyle.config.underline, underlineColor: selectedStyle.config.textColor }))}
                     className={`px-3 py-2 text-sm underline rounded-lg border ${selectedStyle.config.underline ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'}`}
                   >
-                    下划线
+                    {t('vocabulary.underline')}
                   </button>
                   <button
                     onClick={() => updateStyle(updateConfig(selectedStyle, { strikethrough: !selectedStyle.config.strikethrough, strikethroughColor: selectedStyle.config.textColor }))}
                     className={`px-3 py-2 text-sm line-through rounded-lg border ${selectedStyle.config.strikethrough ? 'bg-indigo-600 text-white border-indigo-600' : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'}`}
                   >
-                    删除线
+                    {t('vocabulary.strikethrough')}
                   </button>
                 </div>
 
                 <div>
-                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">单词字体</label>
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('vocabulary.fontFamily')}</label>
                   <div className="grid grid-cols-3 gap-2 mt-1.5">
                     {(['mono', 'sans', 'serif'] as const).map(font => (
                       <button
@@ -360,14 +362,14 @@ export default function Vocabulary() {
                             : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300'
                         }`}
                       >
-                        {font === 'mono' ? '等宽' : font === 'sans' ? '无衬线' : '衬线'}
+                        {font === 'mono' ? t('vocabulary.mono') : font === 'sans' ? t('vocabulary.sans') : t('vocabulary.serif')}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-500 dark:text-gray-400">圆角: {selectedStyle.config.borderRadius ?? 0}px</label>
+                  <label className="text-xs text-gray-500 dark:text-gray-400">{t('vocabulary.borderRadius')}: {selectedStyle.config.borderRadius ?? 0}px</label>
                   <input
                     type="range"
                     min={0}
@@ -379,7 +381,7 @@ export default function Vocabulary() {
                 </div>
 
                 <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-4">
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">实时预览</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">{t('vocabulary.preview')}</p>
                   <p className="text-base leading-8 text-gray-700 dark:text-gray-200">
                     The careful{' '}
                     <span

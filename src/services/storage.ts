@@ -9,6 +9,7 @@ const CUSTOM_TEXTS_KEY = 'typetype_custom_texts';
 const ARTICLES_KEY = 'typetype_articles';
 const HIGHLIGHT_STYLES_KEY = 'typetype_highlight_styles';
 const WORD_LISTS_KEY = 'typetype_word_lists';
+const DAILY_GOAL_KEY = 'typetype_daily_goal';
 
 const DEFAULT_HIGHLIGHT_STYLES: HighlightStyle[] = [
   {
@@ -315,5 +316,38 @@ export const storageService = {
     lists.push(list);
     this.saveWordLists(lists);
     return list;
+  },
+
+  // ---- 高级数据分析 ----
+
+  getHistoryByDateRange(from: number, to: number): TypingResult[] {
+    const history = this.getHistory();
+    return history.filter(r => r.timestamp >= from && r.timestamp <= to);
+  },
+
+  getTopErrors(limit = 20): { char: string; errors: number; total: number; rate: number }[] {
+    const errorStats = this.getErrorStats();
+    if (!errorStats || Object.keys(errorStats).length === 0) return [];
+
+    return Object.entries(errorStats)
+      .map(([char, data]) => ({
+        char,
+        errors: data.errors,
+        total: data.total,
+        rate: data.total > 0 ? data.errors / data.total : 0,
+      }))
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, limit);
+  },
+
+  getDailyGoal(): { wpmTarget: number; sessionsTarget: number } | null {
+    try {
+      const raw = localStorage.getItem(DAILY_GOAL_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  },
+
+  saveDailyGoal(goal: { wpmTarget: number; sessionsTarget: number }): void {
+    localStorage.setItem(DAILY_GOAL_KEY, JSON.stringify(goal));
   },
 };

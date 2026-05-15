@@ -62,10 +62,10 @@ export default function Home() {
       {/* Custom Link */}
       <div className="text-center">
         <Link
-          to="/custom"
+          to="/articles"
           className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium hover:underline transition-colors duration-200"
         >
-          使用导入文章练习 →
+          我的文章 →
         </Link>
       </div>
     </div>

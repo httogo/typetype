@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
 import { useTextRendering } from '../hooks/useTextRendering';
 import { dictionaryService } from '../services/dictionary';
@@ -23,6 +24,7 @@ function alignToWordBoundary(text: string, pos: number): number {
 }
 
 export default function Reading() {
+  const { t } = useTranslation();
   const location = useLocation();
   const { settings } = useSettings();
   const { difficulty } = settings;
@@ -230,7 +232,7 @@ export default function Reading() {
       setTooltip({
         word,
         phonetic: '',
-        translation: '未收录',
+        translation: t('tooltip.notFound'),
         position: { x: rect.left, y: rect.bottom, width: rect.width, top: rect.top },
       });
     }
@@ -359,7 +361,7 @@ export default function Reading() {
           onClick={loadNextText}
           className="px-5 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 hover:shadow-md transition-all duration-200"
         >
-          下一篇
+          {t('reading.next')}
         </button>
       </div>
     </div>

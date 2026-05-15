@@ -1,13 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 const navItems = [
-  { to: '/', label: '练习', end: true },
-  { to: '/reading', label: '阅读' },
-  { to: '/custom', label: '导入文章' },
-  { to: '/articles', label: '我的文章' },
-  { to: '/history', label: '历史记录' },
-  { to: '/vocabulary', label: '词表' },
+  { to: '/', labelKey: 'nav.practice', end: true },
+  { to: '/reading', labelKey: 'nav.reading' },
+  { to: '/articles', labelKey: 'nav.articles' },
+  { to: '/history', labelKey: 'nav.history' },
+  { to: '/vocabulary', labelKey: 'nav.vocabulary' },
 ];
 
 interface NavigationBarProps {
@@ -15,10 +15,11 @@ interface NavigationBarProps {
 }
 
 export default function NavigationBar({ children }: NavigationBarProps) {
+  const { t } = useTranslation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="backdrop-blur-sm bg-white/90 dark:bg-gray-900/90 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-200">
+    <nav role="navigation" aria-label={t('nav.mainNav')} className="backdrop-blur-sm bg-white/90 dark:bg-gray-900/90 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-200">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-12">
           {/* 左侧：品牌名 */}
@@ -45,7 +46,9 @@ export default function NavigationBar({ children }: NavigationBarProps) {
                     }`
                   }
                 >
-                  {item.label}
+                  {({ isActive }) => (
+                    <span aria-current={isActive ? 'page' : undefined}>{t(item.labelKey)}</span>
+                  )}
                 </NavLink>
               ))}
             </div>
@@ -82,14 +85,14 @@ export default function NavigationBar({ children }: NavigationBarProps) {
                 end={item.end}
                 onClick={() => setMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `block px-3 py-1.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                  `block px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 touch-active ${
                     isActive
                       ? 'bg-indigo-50 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
                       : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`
                 }
               >
-                {item.label}
+                {t(item.labelKey)}
               </NavLink>
             ))}
           </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { storageService } from '../services/storage';
 import type { WordListTerm } from '../types';
 
@@ -11,6 +12,7 @@ interface WordTooltipProps {
 }
 
 const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translation, position, onClose }: WordTooltipProps) {
+  const { t } = useTranslation();
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [placement, setPlacement] = useState<'above' | 'below'>('above');
   const [coords, setCoords] = useState({ left: 0, top: 0 });
@@ -88,7 +90,7 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
         return list.name;
       }
     }
-    return '词表';
+    return t('tooltip.wordList');
   };
 
   const handleRemoveFromWordList = () => {
@@ -190,6 +192,8 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
   return (
     <div
       ref={tooltipRef}
+      role="tooltip"
+      aria-label={t('tooltip.definition', { word })}
       className={`fixed z-50 transition-opacity duration-200 ${visible ? 'opacity-100' : 'opacity-0'}`}
       style={{ left: coords.left, top: coords.top }}
     >
@@ -218,7 +222,7 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
                   <button
                     onClick={handleRemoveFromWordList}
                     className="ml-2 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    title={`从「${getContainingListName()}」中移除`}
+                    title={t('tooltip.removeFrom', { name: getContainingListName() })}
                   >
                     −
                   </button>
@@ -233,8 +237,8 @@ const WordTooltip = React.memo(function WordTooltip({ word, phonetic, translatio
                     }}
                     className="ml-2 w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     title={wordLists.length > 1 
-                      ? `左键添加到「${wordLists[0]?.name}」\n右键选择其他词表` 
-                      : `添加到「${wordLists[0]?.name}」`}
+                      ? t('tooltip.addToWithAlt', { name: wordLists[0]?.name })
+                      : t('tooltip.addTo', { name: wordLists[0]?.name })}
                   >
                     +
                   </button>

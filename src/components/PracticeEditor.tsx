@@ -114,6 +114,7 @@ export function PracticeEditor({
             data-char={charState.char}
             className={className}
             style={extraStyle}
+            {...(charState.status === 'current' ? { 'aria-current': 'true' as const, 'aria-label': `当前字符: ${charState.char}` } : {})}
           >
             {charState.char === ' ' ? '\u00A0' : charState.char}
           </span>
@@ -156,7 +157,7 @@ export function PracticeEditor({
   }, [wordGroups, windowStartGroupIdx, windowEndGroupIdx, chars, currentIndex, settings.freqHighlight, phraseMarkedIndices, highlightedIndices, wordFrequencies, wordAnnotations, customHighlightMap]);
 
   return (
-    <div className="flex-1 flex flex-col relative min-h-0">
+    <div className="flex-1 flex flex-col relative min-h-0" role="application" aria-label="打字练习区" aria-describedby="practice-stats">
       {/* Pause overlay */}
       {isPaused && isStarted && (
         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
@@ -169,7 +170,7 @@ export function PracticeEditor({
       {/* Text Display Area - fills available space */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-8"
+        className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-8"
         style={maskStyle}
         onScroll={onScroll}
         onWheel={onWheel}
@@ -177,7 +178,7 @@ export function PracticeEditor({
         <div
           ref={textAreaRef}
           className="font-mono leading-relaxed tracking-wide break-all max-w-4xl mx-auto"
-          style={{ fontSize: `${settings.fontSize}px` }}
+          style={{ fontSize: `${Math.min(settings.fontSize, window.innerWidth < 768 ? 18 : 32)}px` }}
           onClick={onTextAreaClick}
         >
           {/* Part 1: Before window - merged span for already-typed text */}

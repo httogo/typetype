@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSettings } from '../context/SettingsContext';
 import { useStorageSync } from '../hooks/useStorageSync';
 import NavigationBar from './NavigationBar';
@@ -7,6 +8,7 @@ import SettingsPanel from './SettingsPanel';
 
 export default function Layout() {
   useStorageSync();
+  const { t } = useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsPanelRef = useRef<HTMLDivElement>(null);
   const { settings, updateSettings } = useSettings();
@@ -59,13 +61,18 @@ export default function Layout() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 flex flex-col transition-colors duration-200">
+      {/* 跳过导航链接 */}
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-white dark:bg-gray-800 px-4 py-2 rounded shadow z-50 text-sm">
+        {t('layout.skipNav')}
+      </a>
+
       {/* 顶部导航栏 */}
       <NavigationBar>
         {/* Theme toggle button */}
         <button
           onClick={toggleTheme}
           className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-          title="切换主题"
+          title={t('layout.toggleTheme')}
         >
           {settings.theme === 'dark' ? (
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,7 +90,7 @@ export default function Layout() {
           <button
             onClick={() => setSettingsOpen(!settingsOpen)}
             className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-            title="设置"
+            title={t('layout.settings')}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -101,7 +108,7 @@ export default function Layout() {
       </NavigationBar>
 
       {/* 主内容区域 - 占满剩余空间 */}
-      <main className="flex-1 flex flex-col min-h-0">
+      <main id="main-content" className="flex-1 flex flex-col min-h-0">
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-gray-800 mx-2 sm:mx-4 my-2 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 transition-colors duration-200">
           <Outlet />
         </div>

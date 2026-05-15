@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PracticeMode } from '../types';
 
 interface PracticeStatsBarProps {
@@ -9,6 +10,7 @@ interface PracticeStatsBarProps {
   mode: PracticeMode;
   currentIndex: number;
   totalChars: number;
+  historicalBest?: number;
 }
 
 function formatTime(seconds: number) {
@@ -24,15 +26,24 @@ export const PracticeStatsBar: React.FC<PracticeStatsBarProps> = React.memo(({
   mode,
   currentIndex,
   totalChars,
+  historicalBest,
 }) => {
+  const { t } = useTranslation();
   return (
-    <div className="border-b border-gray-100 dark:border-gray-700">
-      <div className="max-w-4xl mx-auto px-4 sm:px-8 py-1.5 flex items-center text-xs text-gray-500 dark:text-gray-400 tabular-nums">
-        <div className="flex items-center gap-4">
-          <span>WPM: <span className="font-medium text-gray-700 dark:text-gray-200">{wpm}</span></span>
-          <span>准确率: <span className="font-medium text-gray-700 dark:text-gray-200">{accuracy}%</span></span>
-          <span>{mode === 'timed' ? '剩余' : '用时'}: <span className="font-medium text-gray-700 dark:text-gray-200">{formatTime(timeDisplay)}</span></span>
-          <span>进度: <span className="font-medium text-gray-700 dark:text-gray-200">{currentIndex}/{totalChars}</span></span>
+    <div id="practice-stats" role="status" aria-live="polite" aria-atomic="true" className="border-b border-gray-100 dark:border-gray-700">
+      <div className="max-w-4xl mx-auto px-3 sm:px-8 py-1.5 flex items-center text-xs text-gray-500 dark:text-gray-400 tabular-nums">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <span>
+            {t('practice.wpm')}: <span className="font-medium text-gray-700 dark:text-gray-200">{wpm}</span>
+            {historicalBest != null && wpm > 0 && (
+              <span className={wpm >= historicalBest ? 'text-green-500 ml-1' : 'text-gray-400 ml-1'}>
+                {wpm >= historicalBest ? '↑' : '↓'} {t('practice.best')} {historicalBest}
+              </span>
+            )}
+          </span>
+          <span>{t('practice.accuracy')}: <span className="font-medium text-gray-700 dark:text-gray-200">{accuracy}%</span></span>
+          <span>{mode === 'timed' ? t('practice.remaining') : t('practice.time')}: <span className="font-medium text-gray-700 dark:text-gray-200">{formatTime(timeDisplay)}</span></span>
+          <span className="hidden sm:inline">{t('practice.progress')}: <span className="font-medium text-gray-700 dark:text-gray-200">{currentIndex}/{totalChars}</span></span>
         </div>
       </div>
     </div>

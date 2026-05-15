@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTypingEngine } from '../hooks/useTypingEngine';
 import { useTextRendering } from '../hooks/useTextRendering';
 import { useSettings } from '../context/SettingsContext';
@@ -18,6 +19,7 @@ import {
 import type { WordList, HighlightStyle } from '../types';
 
 export default function Practice() {
+  const { t } = useTranslation();
   const { settings } = useSettings();
   const { difficulty, mode, timedDuration } = settings;
 
@@ -58,6 +60,13 @@ export default function Practice() {
   // Load dictionary on mount
   useEffect(() => {
     dictionaryService.load();
+  }, []);
+
+  // Compute historical best WPM
+  const historicalBest = useMemo(() => {
+    const history = storageService.getHistory();
+    if (!history.length) return null;
+    return Math.max(...history.map(r => r.wpm));
   }, []);
 
   // Listen for wordlists-updated event
@@ -332,7 +341,7 @@ export default function Practice() {
       setTooltip({
         word,
         phonetic: '',
-        translation: '未收录',
+        translation: t('tooltip.notFound'),
         position: { x: rect.left, y: rect.bottom, width: rect.width, top: rect.top },
       });
     }
@@ -378,17 +387,18 @@ export default function Practice() {
           mode={mode}
           currentIndex={currentIndex}
           totalChars={chars.length}
+          historicalBest={historicalBest ?? undefined}
         />
       )}
 
       {/* Main Content */}
       {isPending ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">加载中...</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 animate-pulse">{t('practice.loading')}</p>
         </div>
       ) : (isFinished || phase === 'finished') && resultSaved ? (
         <div className="flex-1 flex items-center justify-center p-4">
-          <PracticeResultCard result={getResult()} onReset={handleReset} onNext={loadNextText} />
+          <PracticeResultCard result={getResult()} onReset={handleReset} onNext={loadNextText} historicalBest={historicalBest ?? undefined} />
         </div>
       ) : (
         <>
